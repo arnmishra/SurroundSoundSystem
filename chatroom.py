@@ -3,6 +3,12 @@
 import os
 from threading import Thread
 from socket import *
+import pickle
+import time
+
+# Arnav's IP: 172.16.126.165
+# Kush's IP: 172.16.126.207
+
 
 SOCKET = None
 
@@ -13,17 +19,26 @@ def server():
     #print "Waiting to receive messages..."
     while True:
         (data, addr) = SOCKET.recvfrom(1024)
-        print "Received message: " + data
+        response = pickle.loads(data)
+        while time.time() < response["time"]:
+            continue
+        print "Received message: " + response["message"]
         if data == "exit":
             break
     SOCKET.close()
     os._exit(0)
 
 def client():
-    addr = ("172.16.126.191", 9000)
+    addr = ("172.16.126.207", 8000)
     while True:
-        data = raw_input()#"Enter message to send or type 'exit': ")
-        SOCKET.sendto(data, addr)
+        message = raw_input()
+        current_time = time.time()
+        data = {"message": message, "time": current_time+10}
+        pickled_data = pickle.dumps(data)
+        SOCKET.sendto(pickled_data, addr)
+        while time.time() < response["time"]:
+            continue
+        print "Sent message: " + response["message"]
         if data == "exit":
             break
 
