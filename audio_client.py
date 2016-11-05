@@ -1,43 +1,34 @@
 #http://stackoverflow.com/questions/21164804/udp-sound-transfer-played-sound-have-big-noise
 import pyaudio
 import socket
-from threading import Thread
+import wave
 
-frames = []
+CHUNK = 1024
+FORMAT = pyaudio.paInt16
+CHANNELS = 2
+RATE = 44100
 
-def udpStream():
-    udp = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)    
+wf = wave.open("temp.wav", 'rb')
 
-    while True:
-        if len(frames) > 0:
-            udp.sendto(frames.pop(0), ("127.0.0.1", 12345))
+p = pyaudio.PyAudio()
 
-    udp.close()
+stream = p.open(format =
+            p.get_format_from_width(wf.getsampwidth()),
+            channels = wf.getnchannels(),
+            rate = wf.getframerate(),
+            output = True)
 
-def record(stream, CHUNK):    
-    while True:
-        frames.append(stream.read(CHUNK))
+chunk = 1024
 
-if __name__ == "__main__":
-    CHUNK = 1024
-    FORMAT = pyaudio.paInt16
-    CHANNELS = 2
-    RATE = 44100
+data = wf.readframes(chunk)
 
-    p = pyaudio.PyAudio()
+udp = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)    
 
-    stream = p.open(format = FORMAT,
-                    channels = CHANNELS,
-                    rate = RATE,
-                    input = True,
-                    frames_per_buffer = CHUNK,
-                    )
+while data != '':
+    udp.sendto(data, ("127.0.0.1", 12345))
+    data = wf.readframes(chunk)
 
-    Tr = Thread(target = record, args = (stream, CHUNK,))
-    Ts = Thread(target = udpStream)
-    Tr.setDaemon(True)
-    Ts.setDaemon(True)
-    Tr.start()
-    Ts.start()
-    while True:
-        a = 0
+while True:
+    a = 0
+stream.close()
+p.terminate()

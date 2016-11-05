@@ -19,9 +19,9 @@ def udpStream(CHUNK):
 def play(stream, CHUNK):
     BUFFER = 10
     while True:
-            if len(frames) == BUFFER:
-                while True:
-                    stream.write(frames.pop(0), CHUNK)
+        if len(frames) == BUFFER:
+            while True:
+                stream.write(frames.pop(0), CHUNK)
 
 if __name__ == "__main__":
     FORMAT = pyaudio.paInt16
