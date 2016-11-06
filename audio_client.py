@@ -5,10 +5,9 @@ import wave
 
 CHUNK = 1024
 
-wf = wave.open("temp.wav", 'rb')
+wf = wave.open("song.wav", 'rb')
 
 p = pyaudio.PyAudio()
-
 
 stream = p.open(format =
             p.get_format_from_width(wf.getsampwidth()),
@@ -23,10 +22,7 @@ udp = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
 while data != '':
     udp.sendto(data, ("127.0.0.1", 12345))
-    #stream.write(data)
     data = wf.readframes(CHUNK)
 
-while True:
-    a = 0
 stream.close()
 p.terminate()
