@@ -4,13 +4,11 @@ import socket
 import wave
 
 CHUNK = 1024
-FORMAT = pyaudio.paInt16
-CHANNELS = 2
-RATE = 44100
 
 wf = wave.open("temp.wav", 'rb')
 
 p = pyaudio.PyAudio()
+
 
 stream = p.open(format =
             p.get_format_from_width(wf.getsampwidth()),
@@ -18,15 +16,15 @@ stream = p.open(format =
             rate = wf.getframerate(),
             output = True)
 
-chunk = 1024
 
-data = wf.readframes(chunk)
+data = wf.readframes(CHUNK)
 
 udp = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)    
 
 while data != '':
     udp.sendto(data, ("127.0.0.1", 12345))
-    data = wf.readframes(chunk)
+    #stream.write(data)
+    data = wf.readframes(CHUNK)
 
 while True:
     a = 0

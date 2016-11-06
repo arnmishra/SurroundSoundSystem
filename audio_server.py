@@ -2,8 +2,7 @@
 import pyaudio
 import socket
 from threading import Thread
-
-frames = []
+import wave
 
 def udpStream(CHUNK):
 
@@ -11,32 +10,22 @@ def udpStream(CHUNK):
     udp.bind(("127.0.0.1", 12345))
 
     while True:
-        soundData, addr = udp.recvfrom(CHUNK * CHANNELS * 2)
-        frames.append(soundData)
+        soundData, addr = udp.recvfrom(CHUNK)
+        stream.write(soundData)
 
     udp.close()
 
-def play(stream, CHUNK):
-    BUFFER = 10
-    while True:
-        if len(frames) == BUFFER:
-            while True:
-                stream.write(frames.pop(0), CHUNK)
-
 if __name__ == "__main__":
-    FORMAT = pyaudio.paInt16
+    FORMAT = 32
     CHUNK = 1024
-    CHANNELS = 2
-    RATE = 44100
+    RATE = 11000
 
     p = pyaudio.PyAudio()
-
-    stream = p.open(format=FORMAT,
-                    channels = CHANNELS,
-                    rate = RATE,
-                    output = True,
-                    frames_per_buffer = CHUNK,
-                    )
+    wf = wave.open("temp.wav", 'rb')
+    stream = p.open(format = FORMAT,
+            channels = 1,
+            rate = wf.getframerate(),
+            output = True)
 
     Ts = Thread(target = udpStream, args=(CHUNK,))
     Tp = Thread(target = play, args=(stream, CHUNK,))

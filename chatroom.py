@@ -36,7 +36,6 @@ def client():
         data = {"message": message, "time": current_time+10}
         pickled_data = pickle.dumps(data)
         SOCKET.sendto(pickled_data, addr)
-        print data
         while time.time() < data["time"]:
             continue
         print "Sent message: " + data["message"]
