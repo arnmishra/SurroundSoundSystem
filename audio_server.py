@@ -2,48 +2,62 @@
 import pyaudio
 import socket
 from threading import Thread
-import wave
 import Queue
+import time
+import pickle
 
 data_bites = Queue.Queue()
+udp = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+CHUNK = 1024
+BUFFER = 10
 
-def udpStream(CHUNK):
 
-    udp = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    udp.bind(("", 9000))
+def acknowledge_client():
+    time.sleep(5)
+    udp.sendto("Acknowledged", ("172.16.126.207", 9000))
+
+def set_up_pyaudio(data):
+    global FORMAT, CHANNELS, RATE, stream
+    response = pickle.loads(data)
+    FORMAT = response["format"]
+    CHANNELS = response["channels"]
+    RATE = response["rate"]
+    p = pyaudio.PyAudio()
+    stream = p.open(format = FORMAT, channels = CHANNELS, rate = RATE, output = True)
+    acknowledge_client()
+
+def accept_data():
+    global CHANNELS
+    udp.bind(("", 8000))
+
+    data, addr = udp.recvfrom(CHUNK)
+    print "here"
+    set_up_pyaudio(data)
 
     while True:
-        soundData, addr = udp.recvfrom(CHUNK*CHANNELS*2)
-        data_bites.put(soundData)
+        data, addr = udp.recvfrom(CHUNK*CHANNELS*2)
+        data_bites.put(data)
 
     udp.close()
 
-def run(CHUNK):
-    BUFFER = 10
+def run_music():
+    global stream
     while True:
         if data_bites.qsize() >= BUFFER:
             while data_bites.qsize() > 0:
                 stream.write(data_bites.get(), CHUNK)
 
-if __name__ == "__main__":
-    FORMAT = 8
-    CHANNELS = 2
-    CHUNK = 1024
-    RATE = 44100
+def main():
+    run_music_thread = Thread(target = run_music)
+    accept_data_thread = Thread(target = accept_data)
+    run_music_thread.setDaemon(True)
+    accept_data_thread.setDaemon(True)
+    run_music_thread.start()
+    accept_data_thread.start()
 
-    p = pyaudio.PyAudio()
-    wf = wave.open("song.wav", 'rb')
-    stream = p.open(format = FORMAT,
-            channels = CHANNELS,
-            rate = wf.getframerate(),
-            output = True)
-
-    run_music = Thread(target = run, args=(CHUNK,))
-    get_data = Thread(target = udpStream, args=(CHUNK,))
-    run_music.setDaemon(True)
-    get_data.setDaemon(True)
-    run_music.start()
-    get_data.start()
-    
     while True:
         a = 0
+
+if __name__ == "__main__":
+    main()
+
