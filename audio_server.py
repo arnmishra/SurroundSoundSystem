@@ -14,7 +14,7 @@ BUFFER = 10
 
 def acknowledge_client():
     time.sleep(5)
-    udp.sendto("Acknowledged", ("172.16.126.207", 9000))
+    udp.sendto("Acknowledged", ("127.0.0.1", 9000))
 
 def set_up_pyaudio(data):
     global FORMAT, CHANNELS, RATE, stream
