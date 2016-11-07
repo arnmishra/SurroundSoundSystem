@@ -3,26 +3,27 @@ import pyaudio
 import socket
 from threading import Thread
 import wave
+import Queue
 
-data_bites = []
+data_bites = Queue.Queue()
 
 def udpStream(CHUNK):
 
     udp = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    udp.bind(("127.0.0.1", 12345))
+    udp.bind(("", 9000))
 
     while True:
         soundData, addr = udp.recvfrom(CHUNK*CHANNELS*2)
-        data_bites.append(soundData)
+        data_bites.put(soundData)
 
     udp.close()
 
 def run(CHUNK):
-    BUFFER = 1
+    BUFFER = 10
     while True:
-        if len(data_bites) == BUFFER:
-            while len(data_bites) > 0:
-                stream.write(data_bites.pop(0), CHUNK)
+        if data_bites.qsize() >= BUFFER:
+            while data_bites.qsize() > 0:
+                stream.write(data_bites.get(), CHUNK)
 
 if __name__ == "__main__":
     FORMAT = 8
@@ -37,11 +38,12 @@ if __name__ == "__main__":
             rate = wf.getframerate(),
             output = True)
 
-    Ts = Thread(target = run, args=(CHUNK,))
-    Tp = Thread(target = udpStream, args=(CHUNK,))
-    Tp.setDaemon(True)
-    Ts.setDaemon(True)
-    Tp.start()
-    Ts.start()
+    run_music = Thread(target = run, args=(CHUNK,))
+    get_data = Thread(target = udpStream, args=(CHUNK,))
+    run_music.setDaemon(True)
+    get_data.setDaemon(True)
+    run_music.start()
+    get_data.start()
+    
     while True:
         a = 0

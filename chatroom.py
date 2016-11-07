@@ -8,37 +8,38 @@ import time
 
 # Arnav's IP: 172.16.126.165
 # Kush's IP: 172.16.126.207
+# Master PI IP: 192.168.1.10
 
 
 SOCKET = None
 
 
 def server():
-    addr = ("", 9000)
+    addr = ("", 8000)
     SOCKET.bind(addr)
     #print "Waiting to receive messages..."
     while True:
         (data, addr) = SOCKET.recvfrom(1024)
-        response = pickle.loads(data)
+        '''response = pickle.loads(data)
         while time.time() < response["time"]:
-            continue
-        print "Received message: " + response["message"]
+            continue'''
+        print "Received message: " + data
         if data == "exit":
             break
     SOCKET.close()
     os._exit(0)
 
 def client():
-    addr = ("172.16.126.207", 8000)
+    addr = ("192.168.1.10", 9000)
     while True:
-        message = raw_input()
+        data = raw_input()
         current_time = time.time()
-        data = {"message": message, "time": current_time+10}
-        pickled_data = pickle.dumps(data)
-        SOCKET.sendto(pickled_data, addr)
-        while time.time() < data["time"]:
+        #data = {"message": message, "time": current_time+10}
+        #pickled_data = pickle.dumps(data)
+        SOCKET.sendto(data, addr)
+        '''while time.time() < data["time"]:
             continue
-        print "Sent message: " + data["message"]
+        print "Sent message: " + data["message"]'''
         if data == "exit":
             break
 
