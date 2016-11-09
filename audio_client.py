@@ -9,47 +9,52 @@ import time
 
 UDPSock = socket(AF_INET, SOCK_DGRAM)
 CHUNK = 1024
-current_time = -1
-rtt_delay = -1
 wf = wave.open("song.wav", 'rb')
 data_bites = Queue.Queue()
+BUFFER = 10
 
 def server():
-    UDPSock.bind(("127.0.0.1", 9000))
+    addr = ("172.16.126.116", 9000)
+    UDPSock.bind(addr)
     (data, addr) = UDPSock.recvfrom(1024)
+    print data
     rec_time = time.time()
-    rtt_delay = current_time - rec_time
-
-    my_player_thread = Thread(target=player_thread)
+    global current_time
+    rtt_delay = rec_time - current_time
+    print str(rtt_delay)
+    my_player_thread = Thread(target=player_thread, args = (rtt_delay,))
     my_player_thread.daemon = True
     my_player_thread.start()
-    send_song()
+    send_song(rtt_delay)
 
-def player_thread():
+def player_thread(rtt_delay):
     global stream
+    time.sleep(rtt_delay/2)
     while True:
-        while data_bites.qsize() > 0:
-             stream.write(data_bites.get(), CHUNK)
+        if data_bites.qsize() >= BUFFER:
+            while data_bites.qsize() > 0:
+                 stream.write(data_bites.get(), CHUNK)
 
 
 
-def send_song():
+def send_song(rtt_delay):
     data = wf.readframes(CHUNK)
 
     # udp = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)    
 
     while data != '':
-        UDPSock.sendto(data, ("127.0.0.1", 8000))
+        UDPSock.sendto(data, ("172.16.126.165", 8000))
         data_bites.put(data)
         data = wf.readframes(CHUNK)
 
     stream.close()
+    global p
     p.terminate()
 
 
 def initial_client_message():
     global stream
-    
+    global p
     p = pyaudio.PyAudio()
 
     format = p.get_format_from_width(wf.getsampwidth())
@@ -67,9 +72,11 @@ def initial_client_message():
     message['format'] = format
 
     pickled_data = pickle.dumps(message)
+    global current_time
     current_time = time.time()  
-    UDPSock.sendto(pickled_data, ("127.0.0.1", 8000))
-    print "here"
+    UDPSock.sendto(pickled_data, ("172.16.126.165", 8000))
+    # UDPSock.sendto(pickled_data, ("172.16.126.165", 8000))
+  
 
 
 
