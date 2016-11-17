@@ -6,15 +6,21 @@ import Queue
 import time
 import pickle
 
-data_bites = Queue.Queue()
-udp = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+data_bytes = Queue.Queue()
+udp_8000 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+udp_9000 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 CHUNK = 1024
-BUFFER = 10
-
+BUFFER = 100
+MY_IP = "169.254.227.128"
+YOUR_IP = "169.254.238.230"
 
 def acknowledge_client():
-    #time.sleep(5)
-    udp.sendto("Acknowledged", ("172.16.126.116", 9000))
+    udp_9000.bind(("", 9005))
+    udp_8000.sendto(MY_IP, (YOUR_IP, 9000))
+    while True:
+        data, addr = udp_9000.recvfrom(CHUNK)
+        print "2"
+        udp_9000.sendto("", (YOUR_IP, 9005))
 
 def set_up_pyaudio(data):
     global FORMAT, CHANNELS, RATE, stream
@@ -24,27 +30,31 @@ def set_up_pyaudio(data):
     RATE = response["rate"]
     p = pyaudio.PyAudio()
     stream = p.open(format = FORMAT, channels = CHANNELS, rate = RATE, output = True)
-    acknowledge_client()
+    send_acks_thread = Thread(target = acknowledge_client)
+    send_acks_thread.setDaemon(True)
+    send_acks_thread.start()
 
 def accept_data():
     global CHANNELS
-    udp.bind(("", 8000))
-
-    data, addr = udp.recvfrom(CHUNK)
+    udp_8000.bind(("", 8000))
+    data, addr = udp_8000.recvfrom(CHUNK)
+    print "here"
     set_up_pyaudio(data)
-
+    i = 0
     while True:
-        data, addr = udp.recvfrom(CHUNK*CHANNELS*2)
-        data_bites.put(data)
+        data, addr = udp_8000.recvfrom(CHUNK*CHANNELS*2)
+        data_bytes.put(data)
+        i += 1
+        print i
 
-    udp.close()
+    udp_8000.close()
 
 def run_music():
     global stream
     while True:
-        if data_bites.qsize() >= BUFFER:
-            while data_bites.qsize() > 0:
-                stream.write(data_bites.get(), CHUNK)
+        if data_bytes.qsize() >= BUFFER:
+            while data_bytes.qsize() > 0:
+                stream.write(data_bytes.get(), CHUNK)
 
 def main():
     run_music_thread = Thread(target = run_music)
