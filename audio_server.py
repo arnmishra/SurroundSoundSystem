@@ -11,7 +11,7 @@ udp_8000 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 udp_9000 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 CHUNK = 1024
 BUFFER = 100
-MY_IP = "169.254.227.128"
+MY_IP = "169.254.185.147"
 YOUR_IP = "169.254.238.230"
 
 def acknowledge_client():
@@ -42,8 +42,9 @@ def accept_data():
     set_up_pyaudio(data)
     i = 0
     while True:
-        data, addr = udp_8000.recvfrom(CHUNK*CHANNELS*2)
+        data, addr = udp_8000.recvfrom(CHUNK*CHANNELS*8)
         data_bytes.put(data)
+        #print data
         i += 1
         print i
 
