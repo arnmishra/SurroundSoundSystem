@@ -11,8 +11,8 @@ udp_8000 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 udp_9000 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 CHUNK = 1024
 BUFFER = 100
-MY_IP = "169.254.185.147"
-YOUR_IP = "169.254.238.230"
+MY_IP = "192.168.2.49"
+YOUR_IP = "192.168.2.58"
 
 def acknowledge_client():
     udp_9000.bind(("", 9005))

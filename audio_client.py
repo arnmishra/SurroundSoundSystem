@@ -8,28 +8,117 @@ import pickle
 import time
 
 UDPSock = socket(AF_INET, SOCK_DGRAM)
+UDPSock2 = socket(AF_INET, SOCK_DGRAM)
+UDPSockDynamic = socket(AF_INET, SOCK_DGRAM)
+
+
 CHUNK = 1024
-wf = wave.open("song.wav", 'rb')
 data_bites = Queue.Queue()
-BUFFER = 10
+BUFFER = 100
+
+num_clients = 2
+clients = {}
+
+rtts = []
+
+MY_IP = "192.168.2.58"
+YOUR_IP = "192.168.2.49"
+YOUR_IP_2 = "192.168.2.59"
+
+def calculate_rtt():
+    addr3 = (MY_IP, 9005)
+    UDPSockDynamic.bind(addr3)
+
+    while True:
+        first_time = time.time()
+        UDPSockDynamic.sendto("hello", (YOUR_IP, 9005))
+        (data, addr) = UDPSockDynamic.recvfrom(1024)
+        second_time = time.time()
+        # rtt.append(second_time - first_time)
+        print second_time - first_time
+        time.sleep(1)
+        # print "here"
+
 
 def server():
-    addr = ("172.16.126.116", 9000)
+    addr = (MY_IP, 9000)
     UDPSock.bind(addr)
-    (data, addr) = UDPSock.recvfrom(1024)
-    print data
-    rec_time = time.time()
+
+    addr2 = (MY_IP, 9001)
+    UDPSock2.bind(addr2)
+
+    
+    
+    rec_time = []
+
     global current_time
-    rtt_delay = rec_time - current_time
-    print str(rtt_delay)
-    my_player_thread = Thread(target=player_thread, args = (rtt_delay,))
+
+    max_delay = -1
+
+    print "yo"
+
+    for i in range(num_clients):
+
+        (data, addr) = UDPSock.recvfrom(1024)
+        
+        client = {}
+        client["myIP"] = data
+        client["rec_time"] = time.time()
+        print client["rec_time"]
+        client["rtt_time"] = client["rec_time"] - current_time
+        client["single_time"] = client["rtt_time"]/2.0
+        print client["single_time"]
+        if client["single_time"] > max_delay:
+            max_delay = client["single_time"]
+        clients[data] = client
+        print "client #", i
+
+
+
+    rtt_thread = Thread(target=calculate_rtt)
+    rtt_thread.daemon = True
+    rtt_thread.start()
+
+    print "yo1"
+
+    my_player_thread = Thread(target=player_thread, args = (max_delay,))
     my_player_thread.daemon = True
     my_player_thread.start()
-    send_song(rtt_delay)
+    print "yo2"
+    thread_id = 0
+
+    send_song_no_thread(YOUR_IP,YOUR_IP_2)
+
+    '''for key in clients:
+        client = clients[key]
+        server_thread = Thread(target=send_song, args = (client,max_delay,thread_id))
+        server_thread.daemon = True
+        server_thread.start()
+        thread_id += 1'''
+
+def send_song_no_thread(ip1,ip2):
+    wf = wave.open("song.wav", 'rb')
+    data = wf.readframes(CHUNK)
+    i = 0
+    while data != '':
+        i += 1
+        print i
+        # UDPSock.sendto(data, (ip1, 8000))
+        time.sleep(.2)
+        data_bites.put(data)
+        UDPSock.sendto(data, (ip1, 8000))
+        # data_bites.put(data)
+        UDPSock2.sendto(data, (ip2, 8000))
+        # UDPSock2.sendto(str(i), (ip2, 8000))
+        # time.sleep(.1)
+        
+            
+        data = wf.readframes(CHUNK)
 
 def player_thread(rtt_delay):
     global stream
-    time.sleep(rtt_delay/2)
+    print str(rtt_delay)
+    time.sleep(rtt_delay)
     while True:
         if data_bites.qsize() >= BUFFER:
             while data_bites.qsize() > 0:
@@ -37,25 +126,41 @@ def player_thread(rtt_delay):
 
 
 
-def send_song(rtt_delay):
+def send_song(client,max_delay,thread_id):
+    wf = wave.open("song.wav", 'rb')
     data = wf.readframes(CHUNK)
 
-    # udp = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)    
+    print(client["single_time"])
+    print( max_delay)
 
+
+    time.sleep(max_delay - client["single_time"])
+    i = 0
+    j=0
+    print "here"
     while data != '':
-        UDPSock.sendto(data, ("172.16.126.165", 8000))
-        data_bites.put(data)
+        if thread_id == 0:
+            UDPSock.sendto(data, (client["myIP"], 8000))
+            data_bites.put(data)
+            i += 1
+            print i,thread_id
+        else:
+            UDPSock2.sendto(data, (client["myIP"], 8000))
+            j += 1
+            print j,thread_id
+            
         data = wf.readframes(CHUNK)
 
-    stream.close()
-    global p
-    p.terminate()
+    # stream.close()
+    # global p
+    # p.terminate()
 
 
 def initial_client_message():
     global stream
     global p
     p = pyaudio.PyAudio()
+    wf = wave.open("song.wav", 'rb')
 
     format = p.get_format_from_width(wf.getsampwidth())
     channels = wf.getnchannels()
@@ -73,10 +178,16 @@ def initial_client_message():
 
     pickled_data = pickle.dumps(message)
     global current_time
-    current_time = time.time()  
-    UDPSock.sendto(pickled_data, ("172.16.126.165", 8000))
-    # UDPSock.sendto(pickled_data, ("172.16.126.165", 8000))
-  
+    current_time = time.time()
+    print current_time
+
+    UDPSock.sendto(pickled_data, (YOUR_IP, 8000))
+    print time.time()
+    UDPSock.sendto(pickled_data, (YOUR_IP_2, 8000))
+    print time.time()
+    print "---------"
+
+
 
 
 
@@ -88,17 +199,10 @@ client_thread.daemon = True
 client_thread.start()
 
 
+
+
+
+
+
 while True:
     a = 0
-
-
-
-
-
-
-    
-
-    
-
-
-    
