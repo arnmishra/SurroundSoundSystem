@@ -6,6 +6,7 @@ import Queue
 from threading import Thread
 import pickle
 import time
+import sys
 
 UDPSock = socket(AF_INET, SOCK_DGRAM)
 UDPSock2 = socket(AF_INET, SOCK_DGRAM)
@@ -16,28 +17,27 @@ CHUNK = 1024
 data_bites = Queue.Queue()
 BUFFER = 100
 
-num_clients = 2
 clients = {}
 
 rtts = []
 
-MY_IP = "192.168.2.58"
-YOUR_IP = "192.168.2.49"
-YOUR_IP_2 = "192.168.2.59"
+MY_IP = "169.254.104.3"
+IPS = sys.argv[1:]
+num_clients = len(IPS)
 
-def calculate_rtt():
-    addr3 = (MY_IP, 9005)
-    UDPSockDynamic.bind(addr3)
+# def calculate_rtt():
+#     addr3 = (MY_IP, 9005)
+#     UDPSockDynamic.bind(addr3)
 
-    while True:
-        first_time = time.time()
-        UDPSockDynamic.sendto("hello", (YOUR_IP, 9005))
-        (data, addr) = UDPSockDynamic.recvfrom(1024)
-        second_time = time.time()
-        # rtt.append(second_time - first_time)
-        print second_time - first_time
-        time.sleep(1)
-        # print "here"
+#     while True:
+#         first_time = time.time()
+#         UDPSockDynamic.sendto("hello", (YOUR_IP, 9005))
+#         (data, addr) = UDPSockDynamic.recvfrom(1024)
+#         second_time = time.time()
+#         # rtt.append(second_time - first_time)
+#         print second_time - first_time
+#         time.sleep(1)
+#         # print "here"
 
 
 def server():
@@ -75,9 +75,9 @@ def server():
 
 
 
-    rtt_thread = Thread(target=calculate_rtt)
-    rtt_thread.daemon = True
-    rtt_thread.start()
+    # rtt_thread = Thread(target=calculate_rtt)
+    # rtt_thread.daemon = True
+    # rtt_thread.start()
 
     print "yo1"
 
@@ -87,16 +87,16 @@ def server():
     print "yo2"
     thread_id = 0
 
-    send_song_no_thread(YOUR_IP,YOUR_IP_2)
+    send_song_no_thread()
 
-    '''for key in clients:
-        client = clients[key]
-        server_thread = Thread(target=send_song, args = (client,max_delay,thread_id))
-        server_thread.daemon = True
-        server_thread.start()
-        thread_id += 1'''
+    # for key in clients:
+    #     client = clients[key]
+    #     server_thread = Thread(target=send_song, args = (client,max_delay,thread_id))
+    #     server_thread.daemon = True
+    #     server_thread.start()
+    #     thread_id += 1
 
-def send_song_no_thread(ip1,ip2):
+def send_song_no_thread():
     wf = wave.open("song.wav", 'rb')
     data = wf.readframes(CHUNK)
     i = 0
@@ -104,11 +104,12 @@ def send_song_no_thread(ip1,ip2):
         i += 1
         print i
         # UDPSock.sendto(data, (ip1, 8000))
-        time.sleep(.2)
+        time.sleep(.015)
         data_bites.put(data)
-        UDPSock.sendto(data, (ip1, 8000))
+        for ip in IPS:
+            UDPSock.sendto(data, (ip, 8000))
         # data_bites.put(data)
-        UDPSock2.sendto(data, (ip2, 8000))
+        #UDPSock2.sendto(data, (YOUR_IP_2, 8000))
         # UDPSock2.sendto(str(i), (ip2, 8000))
         # time.sleep(.1)
         
@@ -139,6 +140,7 @@ def send_song(client,max_delay,thread_id):
     j=0
     print "here"
     while data != '':
+        #time.sleep(.01)
         if thread_id == 0:
             UDPSock.sendto(data, (client["myIP"], 8000))
             data_bites.put(data)
@@ -181,10 +183,11 @@ def initial_client_message():
     current_time = time.time()
     print current_time
 
-    UDPSock.sendto(pickled_data, (YOUR_IP, 8000))
-    print time.time()
-    UDPSock.sendto(pickled_data, (YOUR_IP_2, 8000))
-    print time.time()
+    for ip in IPS:  
+        UDPSock.sendto(pickled_data, (ip, 8000))
+        print time.time()
+    #UDPSock.sendto(pickled_data, (YOUR_IP_2, 8000))
+    #print time.time()
     print "---------"
 
 
