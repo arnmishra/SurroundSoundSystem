@@ -7,50 +7,39 @@ import time
 import pickle
 
 data_bytes = Queue.Queue()
-udp_8000 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-udp_9000 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+UDPSock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 CHUNK = 1024
 BUFFER = 100
-MY_IP = "192.168.2.49"
-YOUR_IP = "192.168.2.58"
+MY_IP = "localhost"
 
-def acknowledge_client():
-    udp_9000.bind(("", 9005))
-    udp_8000.sendto(MY_IP, (YOUR_IP, 9000))
-    while True:
-        data, addr = udp_9000.recvfrom(CHUNK)
-        print "2"
-        udp_9000.sendto("", (YOUR_IP, 9005))
-
-def set_up_pyaudio(data):
-    global FORMAT, CHANNELS, RATE, stream
+def set_up_pyaudio(data, client_ip):
+    """ Method to set up the PyAudio streams. """
+    global CHANNELS, stream
     response = pickle.loads(data)
     FORMAT = response["format"]
     CHANNELS = response["channels"]
     RATE = response["rate"]
     p = pyaudio.PyAudio()
     stream = p.open(format = FORMAT, channels = CHANNELS, rate = RATE, output = True)
-    send_acks_thread = Thread(target = acknowledge_client)
-    send_acks_thread.setDaemon(True)
-    send_acks_thread.start()
+    UDPSock.sendto("Acknowledge", (client_ip, 9000))
 
 def accept_data():
+    """ Method to accept data from the client. """
     global CHANNELS
-    udp_8000.bind(("", 8000))
-    data, addr = udp_8000.recvfrom(CHUNK)
-    print "here"
-    set_up_pyaudio(data)
+    UDPSock.bind(("", 8000))
+    data, addr = UDPSock.recvfrom(CHUNK)
+    set_up_pyaudio(data, addr[0])
     i = 0
     while True:
-        data, addr = udp_8000.recvfrom(CHUNK*CHANNELS*8)
+        data, addr = UDPSock.recvfrom(CHUNK*CHANNELS*8)
         data_bytes.put(data)
-        #print data
         i += 1
-        print i
+        print "Received Packet #", i
 
-    udp_8000.close()
+    UDPSock.close()
 
 def run_music():
+    """ Method to play the music once a buffer threshold has been reached. """
     global stream
     while True:
         if data_bytes.qsize() >= BUFFER:
@@ -58,6 +47,7 @@ def run_music():
                 stream.write(data_bytes.get(), CHUNK)
 
 def main():
+    """ Main Function to start threads to playing music and accepting data. """
     run_music_thread = Thread(target = run_music)
     accept_data_thread = Thread(target = accept_data)
     run_music_thread.setDaemon(True)
