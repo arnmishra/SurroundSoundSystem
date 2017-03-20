@@ -1,19 +1,21 @@
-#http://stackoverflow.com/questions/21164804/udp-sound-transfer-played-sound-have-big-noise
 import pyaudio
 import socket
 from threading import Thread
 import Queue
-import time
 import pickle
+
+CHUNK = 1024
+BUFFER = 100
 
 data_bytes = Queue.Queue()
 UDPSock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-CHUNK = 1024
-BUFFER = 100
-MY_IP = "localhost"
 
 def set_up_pyaudio(data, client_ip):
-    """ Method to set up the PyAudio streams. """
+    """ Method to set up the PyAudio streams.
+
+    :param data: the data sent from the master with information about the song format
+    :param client_ip: The IP of the client that sen the information
+    """
     global CHANNELS, stream
     response = pickle.loads(data)
     FORMAT = response["format"]
