@@ -10,12 +10,11 @@ import netifaces as ni
 
 CHUNK = 1024
 BUFFER = 100
-SONG = "wav_files/song.wav"
 
 UDPSock = socket(AF_INET, SOCK_DGRAM)
 data_bytes = Queue.Queue()
 
-def server(my_ip, server_ips):
+def server(my_ip, server_ips, song_path):
     """ Server thread to get all ToF data and start playing client side music and sending data. 
 
     :param my_ip: IP of current device
@@ -43,17 +42,17 @@ def server(my_ip, server_ips):
     my_player_thread.daemon = True
     my_player_thread.start()
 
-    send_song_no_thread(max_delay, server_ips)
-    # send_song_threaded(clients, max_delay)
+    send_song_no_thread(max_delay, server_ips, song_path)
+    # send_song_threaded(max_delay, clients, song_path)
 
-def send_song_no_thread(rtt_delay, server_ips):
+def send_song_no_thread(rtt_delay, server_ips, song_path):
     """ Send song chunks to each client in a single thread.
 
     :param rtt_delay: how long to wait to sync up the rtt times
     :param server_ips: list of IPs of all servers
     """
 
-    wf = wave.open(SONG, 'rb')
+    wf = wave.open(song_path, 'rb')
     data = wf.readframes(CHUNK)
     i = 0
     while data != '':
@@ -65,14 +64,14 @@ def send_song_no_thread(rtt_delay, server_ips):
         print "Sent Packet #", i
         data = wf.readframes(CHUNK)
 
-def send_song_threaded(clients, max_delay):
+def send_song_threaded(max_delay, clients, song_path):
     """ Send song chunks to each client in a separate thread. 
 
     :param clients: a list of client ips to send the music too
     :param max_delay: the longest rtt, how long to wait to sync up the rtt times
     """
 
-    wf = wave.open(SONG, 'rb')
+    wf = wave.open(song_path, 'rb')
     data = wf.readframes(CHUNK)
     i = 0
     while data != '':
@@ -110,7 +109,7 @@ def player_thread(rtt_delay):
             while data_bytes.qsize() > 0:
                  stream.write(data_bytes.get(), CHUNK)
 
-def initial_client_message(server_ips):
+def initial_client_message(server_ips, song_path):
     """ Send an initial message with metadata about the music to the Server. 
 
     :param server_ips: list of IPs of all servers
@@ -118,7 +117,7 @@ def initial_client_message(server_ips):
 
     global stream, start_time
     p = pyaudio.PyAudio()
-    wf = wave.open(SONG, 'rb')
+    wf = wave.open(song_path, 'rb')
 
     format = p.get_format_from_width(wf.getsampwidth())
     channels = wf.getnchannels()
@@ -141,7 +140,7 @@ def initial_client_message(server_ips):
         UDPSock.sendto(pickled_data, (ip, 8000))
 
 
-def main(my_ip, server_ips, num_clients):
+def main(my_ip, server_ips, num_clients, song_path):
     """ Main Function to start Client and Server Threads. 
 
     :param my_ip: IP of the client device
@@ -149,8 +148,8 @@ def main(my_ip, server_ips, num_clients):
     :param num_clients: total number of servers
     """
 
-    client_thread = Thread(target=initial_client_message, args=(server_ips,))
-    server_thread = Thread(target=server, args=(server_ips, my_ip, ))
+    client_thread = Thread(target=initial_client_message, args=(server_ips, song_path, ))
+    server_thread = Thread(target=server, args=(server_ips, my_ip, song_path, ))
     client_thread.daemon = True
     server_thread.daemon = True
     client_thread.start()
@@ -161,9 +160,11 @@ def main(my_ip, server_ips, num_clients):
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        print('Usage: python %s <list_of_server_ips>' % sys.argv[0])
+        print('Usage: python %s <wav_song_name> <list_of_server_ips>' % sys.argv[0])
+        print('e.g. python %s song.wav 1.1.1.1 2.2.2.2 3.3.3.3' % sys.argv[0])
         sys.exit(1)
     my_ip = ni.ifaddresses('en0')[2][0]['addr']
-    server_ips = sys.argv[1:]
+    song_path ="wav_files/" + sys.argv[1]
+    server_ips = sys.argv[2:]
     num_clients = len(server_ips)
-    main(my_ip, server_ips, num_clients)
+    main(my_ip, server_ips, num_clients, song_path)
