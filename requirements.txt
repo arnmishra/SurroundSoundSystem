@@ -1,0 +1,2 @@
+netifaces==0.10.5
+PyAudio==0.2.9

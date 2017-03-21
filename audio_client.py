@@ -56,7 +56,7 @@ def send_song_no_thread(rtt_delay, server_ips, song_path):
     data = wf.readframes(CHUNK)
     i = 0
     while data != '':
-        time.sleep(0) # Live Stream Affect
+        time.sleep(0.01) # Live Stream Affect
         for ip in server_ips:
             UDPSock.sendto(data, (ip, 8000))
         data_bytes.put(data)
@@ -103,7 +103,6 @@ def player_thread(rtt_delay):
     :param rtt_delay: how long to wait to sync up the rtt times
     """
     global stream
-    time.sleep(0)
     while True:
         if data_bytes.qsize() >= BUFFER:
             while data_bytes.qsize() > 0:
