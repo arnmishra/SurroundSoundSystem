@@ -148,7 +148,7 @@ def main(my_ip, server_ips, num_clients, song_path):
     """
 
     client_thread = Thread(target=initial_client_message, args=(server_ips, song_path, ))
-    server_thread = Thread(target=server, args=(server_ips, my_ip, song_path, ))
+    server_thread = Thread(target=server, args=(my_ip, server_ips, song_path, ))
     client_thread.daemon = True
     server_thread.daemon = True
     client_thread.start()

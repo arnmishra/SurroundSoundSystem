@@ -22,6 +22,7 @@ def set_up_pyaudio(data, client_ip):
     CHANNELS = response["channels"]
     RATE = response["rate"]
     p = pyaudio.PyAudio()
+    print "Received Set-Up Information."
     stream = p.open(format = FORMAT, channels = CHANNELS, rate = RATE, output = True)
     UDPSock.sendto("Acknowledge", (client_ip, 9000))
 
