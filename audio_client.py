@@ -6,6 +6,7 @@ from threading import Thread
 import pickle
 import time
 import sys
+import netifaces as ni
 
 CHUNK = 1024
 BUFFER = 100
@@ -159,10 +160,10 @@ def main(my_ip, server_ips, num_clients):
         a = 0
 
 if __name__ == "__main__":
-    if len(sys.argv) < 3:
-        print('Usage: python %s <your_ip> <list_of_server_ips>' % sys.argv[0])
+    if len(sys.argv) < 2:
+        print('Usage: python %s <list_of_server_ips>' % sys.argv[0])
         sys.exit(1)
-    my_ip = sys.argv[1]
-    server_ips = sys.argv[2:]
+    my_ip = ni.ifaddresses('en0')[2][0]['addr']
+    server_ips = sys.argv[1:]
     num_clients = len(server_ips)
     main(my_ip, server_ips, num_clients)
