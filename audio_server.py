@@ -56,7 +56,8 @@ def main():
     accept_data_thread.setDaemon(True)
     run_music_thread.start()
     accept_data_thread.start()
-
+    print "Waiting to receive music from client..."
+    
     while True:
         a = 0
 
