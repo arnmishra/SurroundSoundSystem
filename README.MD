@@ -9,25 +9,28 @@ Clone the repository. You will need [Python 2.7][python] and [PyAudio][pyaudio].
 $  pip install -r requirements.txt
 ```
 
-To change the song, add a new Wave file to the wav_files directory and run the file with the appropriate song name. To start the client, run it with your song name as the first argument followed by the ips of each of the servers:
+You MUST start the slaves before the master. To start the slaves, no extra set-up should be needed:
 
 ```sh
-$  python audio_client.py <song_name> <list_of_server_ips>
+$ python slave.py
+```
+
+To start the master, run it with your song name as the first argument followed by the ips of each of the slaves. To change the song, add a new Wave file to the wav_files directory and run the file with the appropriate song name:
+
+```sh
+$  python master.py <song_name> <list_of_slave_ips>
 ```
 
 example:
 
 ```sh
-$  python audio_client.py song.wav 1.1.1.1 2.2.2.2 3.3.3.3
+$  python master.py song.wav 1.1.1.1 2.2.2.2 3.3.3.3
 ```
 
-To start the server, no extra set-up should be needed:
-
-```sh
-$ python audio_server.py
-```
 
 ### Todos
+
+Work on many of the Todos has begun, so contact the maintainers before beginning.
 
  * Add compatability for audio files that aren't Wave files.
  * Package deployment with an installation and configuration file.

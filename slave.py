@@ -10,11 +10,11 @@ BUFFER = 100
 data_bytes = Queue.Queue()
 UDPSock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
-def set_up_pyaudio(data, client_ip):
+def set_up_pyaudio(data, master_ip):
     """ Method to set up the PyAudio streams.
 
     :param data: the data sent from the master with information about the song format
-    :param client_ip: The IP of the client that sen the information
+    :param master_ip: The IP of the master that sen the information
     """
     global CHANNELS, stream
     response = pickle.loads(data)
@@ -24,10 +24,10 @@ def set_up_pyaudio(data, client_ip):
     p = pyaudio.PyAudio()
     print "Received Set-Up Information."
     stream = p.open(format = FORMAT, channels = CHANNELS, rate = RATE, output = True)
-    UDPSock.sendto("Acknowledge", (client_ip, 9000))
+    UDPSock.sendto("Acknowledge", (master_ip, 9000))
 
 def accept_data():
-    """ Method to accept data from the client. """
+    """ Method to accept data from the master. """
     global CHANNELS
     UDPSock.bind(("", 8000))
     data, addr = UDPSock.recvfrom(CHUNK)
@@ -57,7 +57,7 @@ def main():
     accept_data_thread.setDaemon(True)
     run_music_thread.start()
     accept_data_thread.start()
-    print "Waiting to receive music from client..."
+    print "Waiting to receive music from master..."
     
     while True:
         a = 0
