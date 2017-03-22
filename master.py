@@ -79,7 +79,7 @@ def player_thread(stream):
         if data_bytes.qsize() >= BUFFER:
             while data_bytes.qsize() > 0:
                 packet = data_bytes.get()
-                if "wav_files" in packet:
+                if "audio_files" in packet:
                     playing_song_lock.acquire()
                     playing_song = False
                     playing_song_lock.release()
@@ -145,7 +145,7 @@ def send_heartbeats(ip):
         for ip in heartbeat_slaves:
             if heartbeat_slaves[ip] == -1:
                 heartbeat_sock.sendto("Heartbeat", (ip, 9000))
-                heartbeat_slaves[ip] = time.time() + 1
+                heartbeat_slaves[ip] = time.time() + 1.0
         heartbeat_lock.release()
         time.sleep(1)
 
@@ -162,9 +162,13 @@ def receive_heartbeats():
         receive_time = time.time()
         heartbeat_lock.acquire()
         if addr[0] not in heartbeat_slaves:
-            print "%s incorrectly marked failed. Expected at time %s but current time is %s" % (addr[0], heartbeat_slaves[addr[0]], receive_time)
+            print "%s incorrectly marked failed." % (addr[0])
             sys.exit(1)
-        new_rtt = (receive_time - (heartbeat_slaves[addr[0]] - 1))/2.0
+        new_rtt = float(receive_time - (heartbeat_slaves[addr[0]] - 1.0))/2.0
+        if new_rtt < 0:
+            print receive_time, heartbeat_slaves[addr[0]], new_rtt
+        if receive_time > heartbeat_slaves[addr[0]]:
+            print "%s heartbeat period is over 1 second: %s expected, %s arrival" % (addr[0], heartbeat_slaves[addr[0]], receive_time)
         slaves_rtt[addr[0]] = new_rtt
         if new_rtt > max_delay:
             max_delay = new_rtt
@@ -183,12 +187,13 @@ def identify_failures():
     while True:
         for slave_ip in heartbeat_slaves.keys():
             if heartbeat_slaves[slave_ip] != -1 and heartbeat_slaves[slave_ip] < time.time():
-                heartbeat_lock.acquire()
                 print "%s failed. Expected at time %s but current time is %s" % (slave_ip, heartbeat_slaves[slave_ip], time.time())
+            if heartbeat_slaves[slave_ip] != -1 and heartbeat_slaves[slave_ip] + 30 < time.time(): # 30 second grace period for testing
+                heartbeat_lock.acquire()
                 slave_ips.remove(slave_ip)
                 del heartbeat_slaves[slave_ip]
+                print "Deleted %s backup" % (slave_ip)
                 heartbeat_lock.release()
-            #if heartbeat_slaves[slave_ip] != -1 and heartbeat_slaves[slave_ip] + 60 < time.time():
         time.sleep(1)
 
 
@@ -198,9 +203,9 @@ def convert_song_name(song_name):
     :param song_name: Song name that is passed in by the user
     :return: Path to new song file
     """
-    current_song_path = "wav_files/" + song_name
+    current_song_path = "audio_files/" + song_name
     if song_name.split(".")[-1] != "wav":
-        final_song_path = "wav_files/" + ".".join(song_name.split(".")[0:-1]) + ".wav"
+        final_song_path = "audio_files/" + ".".join(song_name.split(".")[0:-1]) + ".wav"
         tfm = sox.Transformer()
         tfm.build(current_song_path, final_song_path)
         return final_song_path
