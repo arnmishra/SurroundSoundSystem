@@ -6,6 +6,8 @@ from threading import Thread, Lock
 import pickle
 import time
 import sys
+import sox
+import os
 
 CHUNK = 1024
 BUFFER = 12
@@ -17,8 +19,8 @@ song_queue = Queue.Queue() # Queue of songs to play next
 heartbeat_slaves = {} # Hashmap of IP of slave to expected heartbeat arrival time.
 slave_ips = [] # List of IPs of all slaves.
 heartbeat_lock = Lock() # Lock to prevent access during modification of hearbeat data structures during node failure.
-playing_song_lock = Lock()
-playing_song = False
+playing_song_lock = Lock() # Lock for modifying playing song boolean
+playing_song = False # Boolean to identify if song is currently playing
 heartbeat_delay = 1 # How many seconds we will wait before assuming a node has crashed
 max_delay = -1 # Maximum RTT Delay among nodes.
 slaves_rtt = {} # Mapping of slaves IPs to their RTT delays
@@ -37,6 +39,7 @@ def config_messages(song_path):
     """ Send a message with metadata about the song to the Slaves. 
 
     :param song_path: path to the song
+    :return: Time that messages are sent and stream to play audio
     """
 
     p = pyaudio.PyAudio()
@@ -78,11 +81,11 @@ def player_thread(rtt_delay, stream):
         if data_bytes.qsize() >= BUFFER:
             while data_bytes.qsize() > 0:
                 packet = data_bytes.get()
-                if(packet == 'song finish'):
+                if("wav_files" in packet):
                     playing_song_lock.acquire()
                     playing_song = False
                     playing_song_lock.release()
-                    return
+                    os.remove(packet)
                 else:
                     stream.write(packet, CHUNK)
 
@@ -120,7 +123,7 @@ def send_song(song_path, is_threaded):
         i += 1
         print "Sent Packet #", i
         data = wf.readframes(CHUNK)
-    data_bytes.put('song finish')
+    data_bytes.put(song_path)
 
 def send_heartbeats(ip):
     """ Thread to send heartbeats to each of the slaves
@@ -172,12 +175,32 @@ def identify_failures():
                 heartbeat_lock.release()
         time.sleep(1)
 
-def start_song(song_path):
+
+def convert_song_name(song_name):
+    """ Check if file is a wave file, and if not convert it to a wave file
+
+    :param song_name: Song name that is passed in by the user
+    :return: Path to new song file
+    """
+    current_song_path = "wav_files/" + song_name
+    if song_name.split(".")[-1] != "wav":
+        final_song_path = "wav_files/" + ".".join(song_name.split(".")[0:-1]) + ".wav"
+        tfm = sox.Transformer()
+        tfm.build(current_song_path, final_song_path)
+        return final_song_path
+    else:
+        return current_song_path
+
+def start_song(song_name):
     """ Function to calculate RTT and start playing and sending a song. 
 
     :param song_path: path to song file
     """
     global max_delay, slaves_rtt
+    playing_song_lock.acquire()
+    playing_song = True
+    playing_song_lock.release()
+    song_path = convert_song_name(song_name)
     start_time, stream = config_messages(song_path)
     for i in range(len(slave_ips)):
         (data, addr) = data_sock.recvfrom(1024)
@@ -205,17 +228,11 @@ def accept_input():
                 print 'Added song to queue'
                 song_queue.put(song_name)
             else:
-                playing_song_lock.acquire()
-                playing_song = True
-                playing_song_lock.release()
-                start_song('wav_files/'+ song_name)
+                start_song(song_name)
         time.sleep(1.0)
 
 def main():
-    """ Main thread to get all ToF data and start playing music and sending data. 
-
-    :param song_path: path to the song
-    """
+    """ Main thread to get all ToF data and start playing music and sending data.    """
     global playing_song
 
     for ip in slave_ips:
@@ -223,18 +240,15 @@ def main():
         start_thread(send_heartbeats, (ip,))
     start_thread(receive_heartbeats,())
     start_thread(identify_failures, ())
-    start_thread(accept_input,()) #start thread to accept input
+    start_thread(accept_input,())
 
     while True:
         while(song_queue.qsize() > 0 and playing_song == False):
-            playing_song_lock.acquire()
-            playing_song = True
-            playing_song_lock.release()
-            start_song('wav_files/'+song_queue.get())
+            start_song(song_queue.get())
         
 
 if __name__ == "__main__":
-    if len(sys.argv) < 1:
+    if len(sys.argv) < 2:
         print('Usage: python %s <list_of_slave_ips>' % sys.argv[0])
         print('e.g. python %s 1.1.1.1 2.2.2.2 3.3.3.3' % sys.argv[0])
         sys.exit(1)
