@@ -3,6 +3,7 @@ from socket import *
 from threading import Thread
 import Queue
 import pickle
+import os,psutil
 
 CHUNK = 1024
 BUFFER = 12
@@ -10,7 +11,7 @@ BUFFER = 12
 data_bytes = Queue.Queue() # Queue of song data chunks to play
 data_sock = socket(AF_INET, SOCK_DGRAM) # UDP Socket for receiving audio data
 heartbeat_sock = socket(AF_INET, SOCK_DGRAM) # UDP Socket for managing heartbeats
-
+process_data = psutil.Process(os.getpid())
 
 def start_thread(method_name, arguments):
     """ Method to start new daemon threads.
@@ -80,6 +81,7 @@ def heartbeats():
 
 def main():
     """ Main Function to start threads to playing music and accepting data. """
+    print process_data.cpu_times()
     start_thread(run_music, ())
     start_thread(accept_data, ())
     start_thread(heartbeats, ())
