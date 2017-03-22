@@ -2,7 +2,7 @@ import pyaudio
 from socket import *
 import wave
 import Queue
-from threading import Thread
+from threading import Thread, Lock
 import pickle
 import time
 import sys
@@ -10,11 +10,12 @@ import sys
 CHUNK = 1024
 BUFFER = 100
 
-DataSock = socket(AF_INET, SOCK_DGRAM) # UDP Socket for sending data
-HeartbeatSock = socket(AF_INET, SOCK_DGRAM) # UDP Socket for managing heartbeats
+data_sock = socket(AF_INET, SOCK_DGRAM) # UDP Socket for sending data
+heartbeat_sock = socket(AF_INET, SOCK_DGRAM) # UDP Socket for managing heartbeats
 data_bytes = Queue.Queue() # Queue of song data chunks to play
 heartbeat_slaves = {} # Hashmap of IP of slave to expected heartbeat arrival time.
 slave_ips = [] # List of IPs of all slaves.
+heartbeat_lock = Lock() # Lock to prevent access during modification of hearbeat data structures during node failure.
 
 def start_thread(method_name, arguments):
     """ Method to start new daemon threads.
@@ -52,8 +53,10 @@ def config_messages(song_path):
     pickled_data = pickle.dumps(message)
     start_time = time.time()
 
+    heartbeat_lock.acquire()
     for ip in slave_ips:  
-        DataSock.sendto(pickled_data, (ip, 8000))
+        data_sock.sendto(pickled_data, (ip, 8000))
+    heartbeat_lock.release()
 
     return start_time, stream
 
@@ -78,7 +81,7 @@ def slave_transmission(slave_ip, time_of_flight, data, max_delay):
     """
 
     time.sleep(max_delay - time_of_flight)
-    DataSock.sendto(data, (slave_ip, 8000))
+    data_sock.sendto(data, (slave_ip, 8000))
 
 def send_song_threaded(max_delay, slaves, song_path):
     """ Send song chunks to each slave in a separate thread. 
@@ -111,8 +114,10 @@ def send_song_no_thread(rtt_delay, song_path):
     i = 0
     while data != '':
         time.sleep(0.01) # Live Stream Affect
+        heartbeat_lock.acquire()
         for ip in slave_ips:
-            DataSock.sendto(data, (ip, 8000))
+            data_sock.sendto(data, (ip, 8000))
+        heartbeat_lock.release()
         data_bytes.put(data)
         i += 1
         print "Sent Packet #", i
@@ -123,9 +128,11 @@ def send_heartbeats(ip):
 
     :param ip: IP to send heartbeat to
     """
+    heartbeat_lock.acquire()
     for ip in heartbeat_slaves:
-        HeartbeatSock.sendto("Heartbeat", (ip, 9000))
+        heartbeat_sock.sendto("Heartbeat", (ip, 9000))
         heartbeat_slaves[ip] = time.time() + 1
+    heartbeat_lock.release()
 
 def receive_heartbeats():
     """ Thread to receive heartbeats from each of the slaves 
@@ -135,11 +142,13 @@ def receive_heartbeats():
     time to -1 so that the ip isn't marked failed and send a new heartbeat.
     """
     while True:
-        (data, addr) = HeartbeatSock.recvfrom(1024)
+        (data, addr) = heartbeat_sock.recvfrom(1024)
+        heartbeat_lock.acquire()
         if addr[0] not in heartbeat_slaves:
             print "%s incorrectly marked failed. Expected at time %s but current time is %s" % (addr[0], heartbeat_slaves[addr[0]], time.time())
             sys.exit(1)
         heartbeat_slaves[addr[0]] = -1
+        heartbeat_lock.release()
         start_thread(send_heartbeats, (addr[0],))
 
 def identify_failures():
@@ -149,11 +158,13 @@ def identify_failures():
     it isn't received, remove the slave if it has failed from the dictionary and the send list. 
     """
     while True:
-        for slave_ip in heartbeat_slaves:
+        for slave_ip in heartbeat_slaves.keys():
             if heartbeat_slaves[slave_ip] != -1 and heartbeat_slaves[slave_ip] < time.time():
+                heartbeat_lock.acquire()
                 print "%s failed. Expected at time %s but current time is %s" % (slave_ip, heartbeat_slaves[slave_ip], time.time())
                 slave_ips.remove(slave_ip)
                 del heartbeat_slaves[slave_ip]
+                heartbeat_lock.release()
         time.sleep(1)
 
 def main(song_path):
@@ -163,13 +174,11 @@ def main(song_path):
     """
 
     start_time, stream = config_messages(song_path)
-
-    
     max_delay = -1
     slaves = {}
 
     for i in range(len(slave_ips)):
-        (data, addr) = DataSock.recvfrom(1024)
+        (data, addr) = data_sock.recvfrom(1024)
         slave_ip = addr[0]
         rec_time = time.time()
         rtt_time = rec_time - start_time
@@ -200,6 +209,6 @@ if __name__ == "__main__":
         sys.exit(1)
     song_path ="wav_files/" + sys.argv[1]
     slave_ips = sys.argv[2:]
-    DataSock.bind(("127.0.0.1", 8010))
-    HeartbeatSock.bind(("127.0.0.1", 9010))
+    data_sock.bind(("127.0.0.1", 8010))
+    heartbeat_sock.bind(("127.0.0.1", 9010))
     main(song_path)

@@ -8,8 +8,8 @@ CHUNK = 1024
 BUFFER = 100
 
 data_bytes = Queue.Queue() # Queue of song data chunks to play
-DataSock = socket(AF_INET, SOCK_DGRAM) # UDP Socket for receiving audio data
-HeartbeatSock = socket(AF_INET, SOCK_DGRAM) # UDP Socket for managing heartbeats
+data_sock = socket(AF_INET, SOCK_DGRAM) # UDP Socket for receiving audio data
+heartbeat_sock = socket(AF_INET, SOCK_DGRAM) # UDP Socket for managing heartbeats
 
 
 def start_thread(method_name, arguments):
@@ -36,22 +36,22 @@ def set_up_pyaudio(data, master_ip):
     p = pyaudio.PyAudio()
     print "Received Set-Up Information."
     stream = p.open(format = FORMAT, channels = CHANNELS, rate = RATE, output = True)
-    DataSock.sendto("Acknowledge", (master_ip, 8010))
+    data_sock.sendto("Acknowledge", (master_ip, 8010))
 
 def accept_data():
     """ Method to accept data from the master. """
     global CHANNELS
-    DataSock.bind(("", 8000))
-    data, addr = DataSock.recvfrom(CHUNK)
+    data_sock.bind(("", 8000))
+    data, addr = data_sock.recvfrom(CHUNK)
     set_up_pyaudio(data, addr[0])
     i = 0
     while True:
-        data, addr = DataSock.recvfrom(CHUNK*CHANNELS*8)
+        data, addr = data_sock.recvfrom(CHUNK*CHANNELS*8)
         data_bytes.put(data)
         i += 1
         print "Received Packet #", i
 
-    DataSock.close()
+    data_sock.close()
 
 def run_music():
     """ Method to play the music once a buffer threshold has been reached. """
@@ -62,10 +62,10 @@ def run_music():
                 stream.write(data_bytes.get(), CHUNK)
 
 def heartbeats():
-    HeartbeatSock.bind(("", 9000))
+    heartbeat_sock.bind(("", 9000))
     while True:
-        (data, addr) = HeartbeatSock.recvfrom(1024)
-        HeartbeatSock.sendto("Acknowledge Heartbeat", (addr[0], 9010))
+        (data, addr) = heartbeat_sock.recvfrom(1024)
+        heartbeat_sock.sendto("Acknowledge Heartbeat", (addr[0], 9010))
 
 def main():
     """ Main Function to start threads to playing music and accepting data. """
