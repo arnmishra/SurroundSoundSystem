@@ -40,7 +40,7 @@ def set_up_pyaudio(data, master_ip):
 
 def accept_data():
     """ Method to accept data from the master. """
-    global CHANNELS
+    global CHANNELS, stream
     data_sock.bind(("", 8000))
     data, addr = data_sock.recvfrom(CHUNK)
     set_up_pyaudio(data, addr[0])
@@ -54,13 +54,12 @@ def accept_data():
             p = pyaudio.PyAudio()
             stream = p.open(format = response["format"], channels = response["channels"], rate = response["rate"], output = True)
             data_sock.sendto("Acknowledge", (addr[0], 8010))
-            BUFFER = 100
             continue
         except:
             pass
         data_bytes.put(data)
         i += 1
-        print "Received Packet #", i
+        #print "Received Packet #", i
 
     data_sock.close()
 
