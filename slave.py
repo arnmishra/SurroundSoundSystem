@@ -53,7 +53,7 @@ def accept_data():
             i = 0
             p = pyaudio.PyAudio()
             stream = p.open(format = response["format"], channels = response["channels"], rate = response["rate"], output = True)
-            UDPSock.sendto("Acknowledge", (addr[0], 9000))
+            data_sock.sendto("Acknowledge", (addr[0], 8010))
             BUFFER = 100
             continue
         except:

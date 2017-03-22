@@ -176,12 +176,7 @@ def identify_failures():
                 heartbeat_lock.release()
         time.sleep(1)
 
-def main(song_path):
-    """ Main thread to get all ToF data and start playing music and sending data. 
-
-    :param song_path: path to the song
-    """
-
+def start_song(song_path):
     start_time, stream = config_messages(song_path)
     max_delay = -1
     slaves = {}
@@ -201,6 +196,14 @@ def main(song_path):
     start_thread(send_song_no_thread, (max_delay, song_path))
     #start_thread(send_song_threaded, (max_delay, slaves, song_path))
 
+def main(song_path):
+    """ Main thread to get all ToF data and start playing music and sending data. 
+
+    :param song_path: path to the song
+    """
+
+    start_song(song_path)
+
     for ip in slave_ips:
         heartbeat_slaves[ip] = -1
         start_thread(send_heartbeats, (ip,))
@@ -216,8 +219,7 @@ def main(song_path):
                 song_queue.put(song_name)
                 print 'Added song to queue'
             else:
-                start_thread(player_thread, (max_delay, stream))
-                start_thread(send_song_no_thread, (max_delay, "wav_files/" + song_name))
+                start_song('wav_files/'+ song_name)
         a = 0
 
 if __name__ == "__main__":
