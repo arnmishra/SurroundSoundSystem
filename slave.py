@@ -1,5 +1,5 @@
 import pyaudio
-import socket
+from socket import *
 from threading import Thread
 import Queue
 import pickle
@@ -7,8 +7,20 @@ import pickle
 CHUNK = 1024
 BUFFER = 100
 
-data_bytes = Queue.Queue()
-UDPSock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+data_bytes = Queue.Queue() # Queue of song data chunks to play
+DataSock = socket(AF_INET, SOCK_DGRAM) # UDP Socket for receiving audio data
+HeartbeatSock = socket(AF_INET, SOCK_DGRAM) # UDP Socket for managing heartbeats
+
+
+def start_thread(method_name, arguments):
+    """ Method to start new daemon threads.
+
+    :args method_name: Name of method to start a thread of
+    :args arguments: Arguments to pass into new thread
+    """
+    thread = Thread(target=method_name, args=arguments)
+    thread.daemon = True
+    thread.start()
 
 def set_up_pyaudio(data, master_ip):
     """ Method to set up the PyAudio streams.
@@ -24,22 +36,22 @@ def set_up_pyaudio(data, master_ip):
     p = pyaudio.PyAudio()
     print "Received Set-Up Information."
     stream = p.open(format = FORMAT, channels = CHANNELS, rate = RATE, output = True)
-    UDPSock.sendto("Acknowledge", (master_ip, 9000))
+    DataSock.sendto("Acknowledge", (master_ip, 8010))
 
 def accept_data():
     """ Method to accept data from the master. """
     global CHANNELS
-    UDPSock.bind(("", 8000))
-    data, addr = UDPSock.recvfrom(CHUNK)
+    DataSock.bind(("", 8000))
+    data, addr = DataSock.recvfrom(CHUNK)
     set_up_pyaudio(data, addr[0])
     i = 0
     while True:
-        data, addr = UDPSock.recvfrom(CHUNK*CHANNELS*8)
+        data, addr = DataSock.recvfrom(CHUNK*CHANNELS*8)
         data_bytes.put(data)
         i += 1
         print "Received Packet #", i
 
-    UDPSock.close()
+    DataSock.close()
 
 def run_music():
     """ Method to play the music once a buffer threshold has been reached. """
@@ -49,14 +61,17 @@ def run_music():
             while data_bytes.qsize() > 0:
                 stream.write(data_bytes.get(), CHUNK)
 
+def heartbeats():
+    HeartbeatSock.bind(("", 9000))
+    while True:
+        (data, addr) = HeartbeatSock.recvfrom(1024)
+        HeartbeatSock.sendto("Acknowledge Heartbeat", (addr[0], 9010))
+
 def main():
     """ Main Function to start threads to playing music and accepting data. """
-    run_music_thread = Thread(target = run_music)
-    accept_data_thread = Thread(target = accept_data)
-    run_music_thread.setDaemon(True)
-    accept_data_thread.setDaemon(True)
-    run_music_thread.start()
-    accept_data_thread.start()
+    start_thread(run_music, ())
+    start_thread(accept_data, ())
+    start_thread(heartbeats, ())
     print "Waiting to receive music from master..."
     
     while True:
