@@ -5,7 +5,7 @@ import Queue
 import pickle
 
 CHUNK = 1024
-BUFFER = 100
+BUFFER = 12
 
 data_bytes = Queue.Queue() # Queue of song data chunks to play
 data_sock = socket(AF_INET, SOCK_DGRAM) # UDP Socket for receiving audio data
@@ -47,6 +47,17 @@ def accept_data():
     i = 0
     while True:
         data, addr = data_sock.recvfrom(CHUNK*CHANNELS*8)
+        try:
+            response = pickle.loads(data[0:CHUNK])
+            print 'Finished song'
+            i = 0
+            p = pyaudio.PyAudio()
+            stream = p.open(format = response["format"], channels = response["channels"], rate = response["rate"], output = True)
+            UDPSock.sendto("Acknowledge", (addr[0], 9000))
+            BUFFER = 100
+            continue
+        except:
+            pass
         data_bytes.put(data)
         i += 1
         print "Received Packet #", i

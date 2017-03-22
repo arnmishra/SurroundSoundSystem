@@ -8,14 +8,16 @@ import time
 import sys
 
 CHUNK = 1024
-BUFFER = 100
+BUFFER = 12
 
 data_sock = socket(AF_INET, SOCK_DGRAM) # UDP Socket for sending data
 heartbeat_sock = socket(AF_INET, SOCK_DGRAM) # UDP Socket for managing heartbeats
 data_bytes = Queue.Queue() # Queue of song data chunks to play
+song_queue = Queue.Queue() # Queue of songs to play next
 heartbeat_slaves = {} # Hashmap of IP of slave to expected heartbeat arrival time.
 slave_ips = [] # List of IPs of all slaves.
 heartbeat_lock = Lock() # Lock to prevent access during modification of hearbeat data structures during node failure.
+playing_song = False
 
 def start_thread(method_name, arguments):
     """ Method to start new daemon threads.
@@ -95,6 +97,7 @@ def send_song_threaded(max_delay, slaves, song_path):
     data = wf.readframes(CHUNK)
     i = 0
     while data != '':
+        playing_song = True
         time.sleep(0.01) # Live Stream Affect
         for slave_ip in slaves:
             start_thread(slave_transmission, (slave_ip, slaves[slave_ip], data, max_delay))
@@ -102,6 +105,11 @@ def send_song_threaded(max_delay, slaves, song_path):
         i += 1
         print "Sent Packet #", i
         data = wf.readframes(CHUNK)
+    playing_song = False
+    if(song_queue.qsize() > 0):
+        start_thread(player_thread, (max_delay, stream))
+        start_thread(send_song_no_thread, (max_delay, "wav_files/" + song_name))
+        playing_song = True
 
 def send_song_no_thread(rtt_delay, song_path):
     """ Send song chunks to each slave in a single thread.
@@ -122,6 +130,7 @@ def send_song_no_thread(rtt_delay, song_path):
         i += 1
         print "Sent Packet #", i
         data = wf.readframes(CHUNK)
+
 
 def send_heartbeats(ip):
     """ Thread to send heartbeats to each of the slaves
@@ -189,7 +198,6 @@ def main(song_path):
         print "Slave #", i, "Connected"
 
     start_thread(player_thread, (max_delay, stream))
-
     start_thread(send_song_no_thread, (max_delay, song_path))
     #start_thread(send_song_threaded, (max_delay, slaves, song_path))
 
@@ -200,6 +208,16 @@ def main(song_path):
     start_thread(identify_failures, ())
     
     while True:
+        request = raw_input()
+        command = request.split(' ')[0]
+        song_name = request.split(' ')[1]
+        if(command == 'add'):
+            if(playing_song == True):
+                song_queue.put(song_name)
+                print 'Added song to queue'
+            else:
+                start_thread(player_thread, (max_delay, stream))
+                start_thread(send_song_no_thread, (max_delay, "wav_files/" + song_name))
         a = 0
 
 if __name__ == "__main__":
