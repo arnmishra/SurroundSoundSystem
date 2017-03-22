@@ -77,11 +77,11 @@ def heartbeats():
     heartbeat_sock.bind(("", 9000))
     while True:
         (data, addr) = heartbeat_sock.recvfrom(1024)
-        heartbeat_sock.sendto("Acknowledge Heartbeat", (addr[0], 9010))
+        cpu_usage = str(process_data.cpu_percent())
+        heartbeat_sock.sendto(cpu_usage, (addr[0], 9010))
 
 def main():
     """ Main Function to start threads to playing music and accepting data. """
-    print process_data.cpu_times()
     start_thread(run_music, ())
     start_thread(accept_data, ())
     start_thread(heartbeats, ())
