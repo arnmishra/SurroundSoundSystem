@@ -84,10 +84,12 @@ def player_thread(stream):
                     playing_song = False
                     playing_song_lock.release()
                     os.remove(packet)
+                    return
                 elif packet == "Finished":
                     playing_song_lock.acquire()
                     playing_song = False
                     playing_song_lock.release()
+                    return
                 else:
                     stream.write(packet, CHUNK)
 
@@ -186,6 +188,7 @@ def identify_failures():
                 slave_ips.remove(slave_ip)
                 del heartbeat_slaves[slave_ip]
                 heartbeat_lock.release()
+            #if heartbeat_slaves[slave_ip] != -1 and heartbeat_slaves[slave_ip] + 60 < time.time():
         time.sleep(1)
 
 
