@@ -3,7 +3,8 @@ from socket import *
 from threading import Thread
 import Queue
 import pickle
-import os,psutil
+import os
+import psutil
 
 CHUNK = 1024
 BUFFER = 12

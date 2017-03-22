@@ -79,11 +79,15 @@ def player_thread(stream):
         if data_bytes.qsize() >= BUFFER:
             while data_bytes.qsize() > 0:
                 packet = data_bytes.get()
-                if("wav_files" in packet):
+                if "wav_files" in packet:
                     playing_song_lock.acquire()
                     playing_song = False
                     playing_song_lock.release()
                     os.remove(packet)
+                elif packet == "Finished":
+                    playing_song_lock.acquire()
+                    playing_song = False
+                    playing_song_lock.release()
                 else:
                     stream.write(packet, CHUNK)
 
@@ -99,10 +103,11 @@ def slave_transmission(slave_ip, time_of_flight, data):
         time.sleep(max_delay - time_of_flight)
     data_sock.sendto(data, (slave_ip, 8000))
 
-def send_song(song_path, is_threaded):
+def send_song(song_path, song_name, is_threaded):
     """ Send song chunks to each slave in a separate thread. 
 
     :param song_path: path to the song
+    :param song_name: original song name provided by user
     :param is_threaded: run with threads or not
     """
     global slaves_rtt, max_delay
@@ -122,7 +127,10 @@ def send_song(song_path, is_threaded):
         i += 1
         print "Sent Packet #", i
         data = wf.readframes(CHUNK)
-    data_bytes.put(song_path)
+    if ".wav" not in song_name:
+        data_bytes.put(song_path)
+    else:
+        data_bytes.put("Finished")
 
 def send_heartbeats(ip):
     """ Thread to send heartbeats to each of the slaves every 1 second
@@ -216,7 +224,7 @@ def start_song(song_name):
         print "Slave #", i, "Connected"
 
     start_thread(player_thread, (stream,))
-    start_thread(send_song, (song_path, True))
+    start_thread(send_song, (song_path, song_name, True))
 
 def accept_input():
     """ Thread to accept new song inputs to play after the current song. """
