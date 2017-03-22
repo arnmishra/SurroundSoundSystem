@@ -15,16 +15,16 @@ You MUST start the slaves before the master. To start the slaves, no extra set-u
 $ python slave.py
 ```
 
-To start the master, run it with your song name as the first argument followed by the ips of each of the slaves. To change the song, add a new Wave file to the wav_files directory and run the file with the appropriate song name:
+To start the master, run it with the ips of each of the slaves as command line arguments. To play a song, type "add <song_name>" in the terminal and hit enter for each song you want to add:
 
 ```sh
-$  python master.py <song_name> <list_of_slave_ips>
+$  python master.py <list_of_slave_ips>
 ```
 
 example:
 
 ```sh
-$  python master.py song.wav 1.1.1.1 2.2.2.2 3.3.3.3
+$  python master.py 1.1.1.1 2.2.2.2 3.3.3.3
 ```
 
 

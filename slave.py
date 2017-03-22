@@ -72,6 +72,7 @@ def run_music():
                 stream.write(data_bytes.get(), CHUNK)
 
 def heartbeats():
+    """ Function to receive and send heartbeats to the master. """
     heartbeat_sock.bind(("", 9000))
     while True:
         (data, addr) = heartbeat_sock.recvfrom(1024)
