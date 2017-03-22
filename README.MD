@@ -15,7 +15,7 @@ You MUST start the slaves before the master. To start the slaves, no extra set-u
 $ python slave.py
 ```
 
-To start the master, run it with the ips of each of the slaves as command line arguments. To play a song, type "add <song_name>" in the terminal and hit enter for each song you want to add:
+To start the master, run it with the ips of each of the slaves as command line arguments. To play a song, type "add <song_name>" in the terminal and hit enter for each song you want to add. Make sure to add the song file to the audio_files directory first:
 
 ```sh
 $  python master.py <list_of_slave_ips>
@@ -32,9 +32,7 @@ $  python master.py 1.1.1.1 2.2.2.2 3.3.3.3
 
 Work on many of the Todos has begun, so contact the maintainers before beginning.
 
- * Add compatability for audio files that aren't Wave files.
  * Package deployment with an installation and configuration file.
- * Allow users to add songs to a queue.
  * Allow users to pause, play, and skip songs.
 
    [python]: <https://www.python.org/download/releases/2.7/>
