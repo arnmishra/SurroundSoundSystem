@@ -127,7 +127,7 @@ def send_song(song_path, song_name, is_threaded):
         heartbeat_lock.release()
         data_bytes.put(data)
         i += 1
-        print "Sent Packet #", i
+        #print "Sent Packet #", i
         data = wf.readframes(CHUNK)
     if ".wav" not in song_name:
         data_bytes.put(song_path)
