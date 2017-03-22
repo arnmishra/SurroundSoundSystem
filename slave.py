@@ -60,7 +60,7 @@ def accept_data():
             pass
         data_bytes.put(data)
         i += 1
-        #print "Received Packet #", i
+        print "Received Packet #", i
 
     data_sock.close()
 

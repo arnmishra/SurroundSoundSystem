@@ -21,7 +21,6 @@ slave_ips = [] # List of IPs of all slaves.
 heartbeat_lock = Lock() # Lock to prevent access during modification of hearbeat data structures during node failure.
 playing_song_lock = Lock() # Lock for modifying playing song boolean
 playing_song = False # Boolean to identify if song is currently playing
-heartbeat_delay = 1 # How many seconds we will wait before assuming a node has crashed
 max_delay = -1 # Maximum RTT Delay among nodes.
 slaves_rtt = {} # Mapping of slaves IPs to their RTT delays
 
@@ -69,14 +68,13 @@ def config_messages(song_path):
 
     return start_time, stream
 
-def player_thread(rtt_delay, stream):
+def player_thread(stream):
     """ Play the music on the slave. 
 
-    :param rtt_delay: how long to wait to sync up the rtt times
     :param stream: stream configuration for playing the audio file
     """
     global playing_song
-    time.sleep(rtt_delay)
+    time.sleep(max_delay)
     while True:
         if data_bytes.qsize() >= BUFFER:
             while data_bytes.qsize() > 0:
@@ -97,7 +95,8 @@ def slave_transmission(slave_ip, time_of_flight, data):
     :param data: the music data packets to be sent
     """
     global max_delay
-    time.sleep(max_delay - time_of_flight)
+    if max_delay > time_of_flight:
+        time.sleep(max_delay - time_of_flight)
     data_sock.sendto(data, (slave_ip, 8000))
 
 def send_song(song_path, is_threaded):
@@ -126,15 +125,19 @@ def send_song(song_path, is_threaded):
     data_bytes.put(song_path)
 
 def send_heartbeats(ip):
-    """ Thread to send heartbeats to each of the slaves
+    """ Thread to send heartbeats to each of the slaves every 1 second
 
     :param ip: IP to send heartbeat to
     """
-    heartbeat_lock.acquire()
-    for ip in heartbeat_slaves:
-        heartbeat_sock.sendto("Heartbeat", (ip, 9000))
-        heartbeat_slaves[ip] = time.time()
-    heartbeat_lock.release()
+    global heartbeat_slaves
+    while True:
+        heartbeat_lock.acquire()
+        for ip in heartbeat_slaves:
+            if heartbeat_slaves[ip] == -1:
+                heartbeat_sock.sendto("Heartbeat", (ip, 9000))
+                heartbeat_slaves[ip] = time.time() + 1
+        heartbeat_lock.release()
+        time.sleep(1)
 
 def receive_heartbeats():
     """ Thread to receive heartbeats from each of the slaves 
@@ -143,7 +146,7 @@ def receive_heartbeats():
     and removed from the list. Print error message and quit. Otherwise set the expected arrival 
     time to -1 so that the ip isn't marked failed and send a new heartbeat.
     """
-    global max_delay
+    global max_delay, slaves_rtt, heartbeat_slaves
     while True:
         (data, addr) = heartbeat_sock.recvfrom(1024)
         receive_time = time.time()
@@ -151,13 +154,14 @@ def receive_heartbeats():
         if addr[0] not in heartbeat_slaves:
             print "%s incorrectly marked failed. Expected at time %s but current time is %s" % (addr[0], heartbeat_slaves[addr[0]], receive_time)
             sys.exit(1)
-        new_rtt = (receive_time - heartbeat_slaves[addr[0]])/2.0
+        new_rtt = (receive_time - (heartbeat_slaves[addr[0]] - 1))/2.0
+        slaves_rtt[addr[0]] = new_rtt
         if new_rtt > max_delay:
             max_delay = new_rtt
-        slaves_rtt[addr[0]] = new_rtt
+        else:
+            max_delay = max(slaves_rtt.values())
         heartbeat_slaves[addr[0]] = -1
         heartbeat_lock.release()
-        start_thread(send_heartbeats, (addr[0],))
 
 def identify_failures():
     """ Thread to identify failures among nodes
@@ -165,9 +169,10 @@ def identify_failures():
     Loop through slaves every 1 second to check if a heartbeat is not recieved in time. If 
     it isn't received, remove the slave if it has failed from the dictionary and the send list. 
     """
+    global heartbeat_slaves
     while True:
         for slave_ip in heartbeat_slaves.keys():
-            if heartbeat_slaves[slave_ip] != -1 and heartbeat_slaves[slave_ip] + heartbeat_delay < time.time():
+            if heartbeat_slaves[slave_ip] != -1 and heartbeat_slaves[slave_ip] < time.time():
                 heartbeat_lock.acquire()
                 print "%s failed. Expected at time %s but current time is %s" % (slave_ip, heartbeat_slaves[slave_ip], time.time())
                 slave_ips.remove(slave_ip)
@@ -210,7 +215,7 @@ def start_song(song_name):
         slaves_rtt[addr[0]] = time_of_flight
         print "Slave #", i, "Connected"
 
-    start_thread(player_thread, (max_delay, stream))
+    start_thread(player_thread, (stream,))
     start_thread(send_song, (song_path, True))
 
 def accept_input():
@@ -219,8 +224,6 @@ def accept_input():
 
     while True:
         request = raw_input()
-    #requests = ['add test1.wav', 'add simple.wav', 'add test1.wav', 'add simple.wav']
-    #for request in requests:
         command = request.split(' ')[0]
         song_name = request.split(' ')[1]
         if(command == 'add'):
@@ -233,7 +236,7 @@ def accept_input():
 
 def main():
     """ Main thread to get all ToF data and start playing music and sending data.    """
-    global playing_song
+    global playing_song, heartbeat_slaves
 
     for ip in slave_ips:
         heartbeat_slaves[ip] = -1
@@ -253,6 +256,6 @@ if __name__ == "__main__":
         print('e.g. python %s 1.1.1.1 2.2.2.2 3.3.3.3' % sys.argv[0])
         sys.exit(1)
     slave_ips = sys.argv[1:]
-    data_sock.bind(("127.0.0.1", 8010))
-    heartbeat_sock.bind(("127.0.0.1", 9010))
+    data_sock.bind(("", 8010))
+    heartbeat_sock.bind(("", 9010))
     main()
