@@ -127,7 +127,7 @@ def send_song(song_path, song_name, is_threaded):
         heartbeat_lock.release()
         data_bytes.put(data)
         i += 1
-        #print "Sent Packet #", i
+        print "Sent Packet #", i
         data = wf.readframes(CHUNK)
     if ".wav" not in song_name:
         data_bytes.put(song_path)
@@ -165,8 +165,6 @@ def receive_heartbeats():
             print "%s incorrectly marked failed." % (addr[0])
             sys.exit(1)
         new_rtt = float(receive_time - (heartbeat_slaves[addr[0]] - 1.0))/2.0
-        if new_rtt < 0:
-            print receive_time, heartbeat_slaves[addr[0]], new_rtt
         if receive_time > heartbeat_slaves[addr[0]]:
             print "%s heartbeat period is over 1 second: %s expected, %s arrival" % (addr[0], heartbeat_slaves[addr[0]], receive_time)
         slaves_rtt[addr[0]] = new_rtt
@@ -251,7 +249,7 @@ def accept_input():
         time.sleep(1.0)
 
 def main():
-    """ Main thread to get all ToF data and start playing music and sending data.    """
+    """ Main thread to get all ToF data and start playing music and sending data. """
     global playing_song, heartbeat_slaves
 
     for ip in slave_ips:
