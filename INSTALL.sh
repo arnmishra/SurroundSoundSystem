@@ -2,4 +2,4 @@
 
 brew install portaudio
 brew install sox --with-lame --with-flac --with-libvorbis
-pip install -r requirements.txt
+sudo pip install -r requirements.txt
