@@ -254,6 +254,7 @@ def main():
 
     for ip in slave_ips:
         heartbeat_slaves[ip] = -1
+    for ip in slave_ips:
         start_thread(send_heartbeats, (ip,))
     start_thread(receive_heartbeats,())
     start_thread(identify_failures, ())
