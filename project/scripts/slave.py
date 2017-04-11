@@ -12,7 +12,8 @@ BUFFER = 12
 data_bytes = Queue.Queue() # Queue of song data chunks to play
 data_sock = socket(AF_INET, SOCK_DGRAM) # UDP Socket for receiving audio data
 heartbeat_sock = socket(AF_INET, SOCK_DGRAM) # UDP Socket for managing heartbeats
-process_data = psutil.Process(os.getpid())
+process_data = psutil.Process(os.getpid()) # Information about the process
+master_ip = "127.0.0.1" # Master's IP Address, to be identified from the Database on the Frontend 
 
 def start_thread(method_name, arguments):
     """ Method to start new daemon threads.
@@ -24,11 +25,10 @@ def start_thread(method_name, arguments):
     thread.daemon = True
     thread.start()
 
-def set_up_pyaudio(data, master_ip):
+def set_up_pyaudio(data):
     """ Method to set up the PyAudio streams.
 
     :param data: the data sent from the master with information about the song format
-    :param master_ip: The IP of the master that sen the information
     """
     global CHANNELS, stream
     response = pickle.loads(data)
@@ -43,9 +43,9 @@ def set_up_pyaudio(data, master_ip):
 def accept_data():
     """ Method to accept data from the master. """
     global CHANNELS, stream
-    data_sock.bind(("", 8000))
+    
     data, addr = data_sock.recvfrom(CHUNK)
-    set_up_pyaudio(data, addr[0])
+    set_up_pyaudio(data)
     i = 0
     while True:
         data, addr = data_sock.recvfrom(CHUNK*CHANNELS*8)
@@ -81,11 +81,13 @@ def heartbeats():
         cpu_usage = str(process_data.cpu_percent())
         heartbeat_sock.sendto(cpu_usage, (addr[0], 9010))
 
-def main():
+def start_slave():
     """ Main Function to start threads to playing music and accepting data. """
+    data_sock.bind(("", 8000))
     start_thread(run_music, ())
     start_thread(accept_data, ())
     start_thread(heartbeats, ())
+    data_sock.sendto("Initialize", (master_ip, 9010))
     print "Waiting to receive music from master..."
     
     while True:
