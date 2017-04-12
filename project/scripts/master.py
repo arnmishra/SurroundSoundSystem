@@ -204,9 +204,10 @@ def convert_song_name(song_name):
     :param song_name: Song name that is passed in by the user
     :return: Path to new song file
     """
-    current_song_path = "audio_files/" + song_name
+    print os.getcwd()
+    current_song_path = "project/audio_files/" + song_name
     if song_name.split(".")[-1] != "wav":
-        final_song_path = "audio_files/" + ".".join(song_name.split(".")[0:-1]) + ".wav"
+        final_song_path = "project/audio_files/" + ".".join(song_name.split(".")[0:-1]) + ".wav"
         tfm = sox.Transformer()
         tfm.build(current_song_path, final_song_path)
         return final_song_path

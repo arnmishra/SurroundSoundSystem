@@ -13,7 +13,6 @@ data_bytes = Queue.Queue() # Queue of song data chunks to play
 data_sock = socket(AF_INET, SOCK_DGRAM) # UDP Socket for receiving audio data
 heartbeat_sock = socket(AF_INET, SOCK_DGRAM) # UDP Socket for managing heartbeats
 process_data = psutil.Process(os.getpid()) # Information about the process
-master_ip = "127.0.0.1" # Master's IP Address, to be identified from the Database on the Frontend 
 
 def start_thread(method_name, arguments):
     """ Method to start new daemon threads.
@@ -25,10 +24,11 @@ def start_thread(method_name, arguments):
     thread.daemon = True
     thread.start()
 
-def set_up_pyaudio(data):
+def set_up_pyaudio(data, master_ip):
     """ Method to set up the PyAudio streams.
 
     :param data: the data sent from the master with information about the song format
+    :param master_ip: IP Address of Master Device
     """
     global CHANNELS, stream
     response = pickle.loads(data)
@@ -40,12 +40,15 @@ def set_up_pyaudio(data):
     stream = p.open(format = FORMAT, channels = CHANNELS, rate = RATE, output = True)
     data_sock.sendto("Acknowledge", (master_ip, 8010))
 
-def accept_data():
-    """ Method to accept data from the master. """
+def accept_data(master_ip):
+    """ Method to accept data from the master. 
+
+    :param master_ip: IP Address of Master Device
+    """
     global CHANNELS, stream
     
     data, addr = data_sock.recvfrom(CHUNK)
-    set_up_pyaudio(data)
+    set_up_pyaudio(data, master_ip)
     i = 0
     while True:
         data, addr = data_sock.recvfrom(CHUNK*CHANNELS*8)
@@ -81,11 +84,11 @@ def heartbeats():
         cpu_usage = str(process_data.cpu_percent())
         heartbeat_sock.sendto(cpu_usage, (addr[0], 9010))
 
-def start_slave():
+def start_slave(master_ip):
     """ Main Function to start threads to playing music and accepting data. """
     data_sock.bind(("", 8000))
     start_thread(run_music, ())
-    start_thread(accept_data, ())
+    start_thread(accept_data, (master_ip, ))
     start_thread(heartbeats, ())
     data_sock.sendto("Initialize", (master_ip, 9010))
     print "Waiting to receive music from master..."
