@@ -11,6 +11,10 @@ import os
 
 CHUNK = 1024
 BUFFER = 12
+DATA_PORT = 9015
+HEARTBEAT_PORT = 9010
+SEND_DATA_PORT = 9005
+SEND_HEARTBEAT_PORT = 9000
 
 data_sock = socket(AF_INET, SOCK_DGRAM) # UDP Socket for sending data
 heartbeat_sock = socket(AF_INET, SOCK_DGRAM) # UDP Socket for managing heartbeats
@@ -99,7 +103,7 @@ def slave_transmission(slave_ip, time_of_flight, data):
     global max_delay
     if max_delay > time_of_flight:
         time.sleep(max_delay - time_of_flight)
-    data_sock.sendto(data, (slave_ip, 8000))
+    data_sock.sendto(data, (slave_ip, SEND_DATA_PORT))
 
 def send_song(song_path, song_name, is_threaded):
     """ Send song chunks to each slave in a separate thread. 
@@ -119,7 +123,7 @@ def send_song(song_path, song_name, is_threaded):
             if is_threaded:
                 start_thread(slave_transmission, (ip, slaves_rtt[ip], data))
             else:
-                data_sock.sendto(data, (ip, 8000))
+                data_sock.sendto(data, (ip, SEND_DATA_PORT))
         heartbeat_lock.release()
         data_bytes.put(data)
         i += 1
@@ -141,7 +145,7 @@ def send_heartbeats(ip):
         heartbeat_lock.acquire()
         for ip in heartbeat_slaves:
             if heartbeat_slaves[ip] == -1:
-                heartbeat_sock.sendto("Heartbeat", (ip, 9000))
+                heartbeat_sock.sendto("Heartbeat", (ip, SEND_HEARTBEAT_PORT))
                 heartbeat_slaves[ip] = time.time() + 1.0
         heartbeat_lock.release()
         time.sleep(1)
@@ -164,7 +168,7 @@ def receive_heartbeats():
             slave_ips.append(addr[0])
             heartbeat_slaves[addr[0]] = -1
             if pickled_data != -1:
-                data_sock.sendto(pickled_data, (addr[0], 8000)) # Send current song configuration materials
+                data_sock.sendto(pickled_data, (addr[0], SEND_DATA_PORT)) # Send current song configuration materials
             heartbeat_lock.release()
             continue
         elif receive_time > heartbeat_slaves[addr[0]]:
@@ -204,7 +208,6 @@ def convert_song_name(song_name):
     :param song_name: Song name that is passed in by the user
     :return: Path to new song file
     """
-    print os.getcwd()
     current_song_path = "project/audio_files/" + song_name
     if song_name.split(".")[-1] != "wav":
         final_song_path = "project/audio_files/" + ".".join(song_name.split(".")[0:-1]) + ".wav"
@@ -226,7 +229,7 @@ def start_song(song_name):
     song_path = convert_song_name(song_name)
     stream = config_messages(song_path)
     for ip in slave_ips:  
-        data_sock.sendto(pickled_data, (ip, 8000))
+        data_sock.sendto(pickled_data, (ip, SEND_DATA_PORT))
     for i in range(len(slave_ips)):
         (data, addr) = data_sock.recvfrom(1024)
         print "%s Slave Connected." % (slave_ips[i])
@@ -254,6 +257,8 @@ def start_master():
     """ Main thread to get all ToF data and start playing music and sending data. """
     global playing_song, heartbeat_slaves
 
+    data_sock.bind(("", DATA_PORT))
+    heartbeat_sock.bind(("", HEARTBEAT_PORT))
     for ip in slave_ips:
         heartbeat_slaves[ip] = -1
     for ip in slave_ips:
@@ -269,6 +274,4 @@ def start_master():
 
 if __name__ == "__main__":
     slave_ips = sys.argv[1:]
-    data_sock.bind(("", 8010))
-    heartbeat_sock.bind(("", 9010))
     main()

@@ -8,6 +8,10 @@ import psutil
 
 CHUNK = 1024
 BUFFER = 12
+DATA_PORT = 9005
+HEARTBEAT_PORT = 9000
+SEND_DATA_PORT = 9015
+SEND_HEARTBEAT_PORT = 9010
 
 data_bytes = Queue.Queue() # Queue of song data chunks to play
 data_sock = socket(AF_INET, SOCK_DGRAM) # UDP Socket for receiving audio data
@@ -38,7 +42,7 @@ def set_up_pyaudio(data, master_ip):
     p = pyaudio.PyAudio()
     print "Received Set-Up Information."
     stream = p.open(format = FORMAT, channels = CHANNELS, rate = RATE, output = True)
-    data_sock.sendto("Acknowledge", (master_ip, 8010))
+    data_sock.sendto("Acknowledge", (master_ip, SEND_DATA_PORT))
 
 def accept_data(master_ip):
     """ Method to accept data from the master. 
@@ -58,7 +62,7 @@ def accept_data(master_ip):
             i = 0
             p = pyaudio.PyAudio()
             stream = p.open(format = response["format"], channels = response["channels"], rate = response["rate"], output = True)
-            data_sock.sendto("Acknowledge", (addr[0], 8010))
+            data_sock.sendto("Acknowledge", (addr[0], SEND_DATA_PORT))
             continue
         except:
             pass
@@ -78,19 +82,19 @@ def run_music():
 
 def heartbeats():
     """ Function to receive and send heartbeats to the master. """
-    heartbeat_sock.bind(("", 9000))
+    heartbeat_sock.bind(("", HEARTBEAT_PORT))
     while True:
         (data, addr) = heartbeat_sock.recvfrom(1024)
         cpu_usage = str(process_data.cpu_percent())
-        heartbeat_sock.sendto(cpu_usage, (addr[0], 9010))
+        heartbeat_sock.sendto(cpu_usage, (addr[0], SEND_HEARTBEAT_PORT))
 
 def start_slave(master_ip):
     """ Main Function to start threads to playing music and accepting data. """
-    data_sock.bind(("", 8000))
+    data_sock.bind(("", DATA_PORT))
     start_thread(run_music, ())
     start_thread(accept_data, (master_ip, ))
     start_thread(heartbeats, ())
-    data_sock.sendto("Initialize", (master_ip, 9010))
+    data_sock.sendto("Initialize", (master_ip, SEND_HEARTBEAT_PORT))
     print "Waiting to receive music from master..."
     
     while True:
