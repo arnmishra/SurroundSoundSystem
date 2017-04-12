@@ -7,15 +7,15 @@ class Room(db.Model):
     room_name = db.Column(db.String)
     max_size = db.Column(db.Integer)
     min_size = db.Column(db.Integer)
-    passphrase = db.Column(db.String)
+    password = db.Column(db.String)
     wifi_network_name = db.Column(db.String)
     master_ip = db.Column(db.String)
 
-    def __init__(self, room_name, max_size, min_size, passphrase, wifi_network_name, master_ip):
+    def __init__(self, room_name, max_size, min_size, password, wifi_network_name, master_ip):
         self.room_name = room_name
         self.max_size = max_size
         self.min_size = min_size
-        self.passphrase = passphrase
+        self.password = password
         self.wifi_network_name = wifi_network_name
         self.master_ip = master_ip
 

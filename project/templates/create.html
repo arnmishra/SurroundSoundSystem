@@ -4,16 +4,26 @@
     <meta charset="UTF-8">
     <title>Home</title>
     <link rel="stylesheet" href="static/css/bootstrap.min.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
 </head>
 <body>
 	<form action="/create_team" method="POST">
-		Room Name: <input name="room_name" type="text" placeholder="i.e. John's Room"><br>
-		Max Size: <input name="max_size" type="number" placeholder="i.e. 6"><br>
-		Min Size: <input name="min_size" type="number" placeholder="i.e. 1"><br>
-		Passphrase: <input name="passphrase" type="text"><br>
-		Repeat Passphrase: <input type="text"><br>
-		Wifi Network Name: <input name="wifi_network_name" type="text"><br>
+		Room Name: <input name="room_name" type="text" placeholder="i.e. John's Room" required><br>
+		Max Size: <input name="max_size" type="number" placeholder="i.e. 6" required><br>
+		Min Size: <input name="min_size" type="number" placeholder="i.e. 1" required><br>
+		Wifi Network Name: <input name="wifi_network_name" type="text" required><br>
+		Password: <input name="password" id="password" type="password" required><br>
+		Confirm Password: <input type="password" name="confirm_password" id="confirm_password" required><br>
 		<input type="submit" value="Submit">
     </form>
 </body>
+
+<script>
+$('#password, #confirm_password').on('keyup', function () {
+    if ($('#password').val() == $('#confirm_password').val()) {
+        $('#password').css('border-color', 'green').css("border-style", "solid");
+    } else 
+        $('#password').css('border-color', 'red').css("border-style", "solid");
+});
+</script>
 </html>

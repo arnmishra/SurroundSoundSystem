@@ -39,10 +39,10 @@ def create_team():
     room_name = request.form["room_name"]
     max_size = request.form["max_size"]
     min_size = request.form["min_size"]
-    passphrase = request.form["passphrase"]
+    assword = request.form["assword"]
     wifi_network_name = request.form["wifi_network_name"]
     master_ip = ni.ifaddresses('en0')[2][0]['addr']
-    new_room = Room(room_name, max_size, min_size, passphrase, wifi_network_name, master_ip)
+    new_room = Room(room_name, max_size, min_size, assword, wifi_network_name, master_ip)
     db.session.add(new_room)
     db.session.commit()
     return render_template("master_portal.html", room_name=room_name)
