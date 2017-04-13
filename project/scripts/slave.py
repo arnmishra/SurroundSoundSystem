@@ -89,7 +89,10 @@ def heartbeats():
         heartbeat_sock.sendto(cpu_usage, (addr[0], SEND_HEARTBEAT_PORT))
 
 def start_slave(master_ip):
-    """ Main Function to start threads to playing music and accepting data. """
+    """ Main Function to start threads to playing music and accepting data. 
+
+    :param master_ip: IP of Master device from Database.
+    """
     data_sock.bind(("", DATA_PORT))
     start_thread(run_music, ())
     start_thread(accept_data, (master_ip, ))
