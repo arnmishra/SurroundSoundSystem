@@ -239,19 +239,25 @@ def start_song(song_name):
 
 def accept_input():
     """ Thread to accept new song inputs to play after the current song. """
-    global playing_song
-
     while True:
         request = raw_input()
         command = request.split(' ')[0]
         song_name = request.split(' ')[1]
         if(command == 'add'):
-            if(playing_song == True):
-                print 'Added song to queue'
-                song_queue.put(song_name)
-            else:
-                start_song(song_name)
-        time.sleep(1.0)
+            add_song(song_name)
+
+def add_song_to_queue(song_name):
+    """ Add songs to the queue or start playing them if they are ready.
+
+    :param song_name: name of the song
+    """
+    global playing_song
+    if playing_song:
+        print 'Added song to queue'
+        song_queue.put(song_name)
+    else:
+        start_song(song_name)
+
 
 def start_master():
     """ Main thread to get all ToF data and start playing music and sending data. """

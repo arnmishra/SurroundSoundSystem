@@ -1,1 +1,7 @@
 Welcome to {{ room_name }}
+
+<form action="/add_song" method="POST">
+	Name of song: <input name="song_name" id="song_name" type="text" required><br>
+	<input name="room_name" id="room_name" type="hidden" value="{{ room_name }}"><br>
+	<input type="submit" value="Submit">
+</form>
