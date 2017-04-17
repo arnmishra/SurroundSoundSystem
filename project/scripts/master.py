@@ -127,7 +127,7 @@ def send_song(song_path, song_name, is_threaded):
         heartbeat_lock.release()
         data_bytes.put(data)
         i += 1
-        print "Sent Packet #", i
+        #print "Sent Packet #", i
         data = wf.readframes(CHUNK)
     if ".wav" not in song_name: # Put non .wav files on queue to delete extra file
         data_bytes.put(song_path)
@@ -258,6 +258,8 @@ def add_song_to_queue(song_name):
     else:
         start_song(song_name)
 
+def get_song_queue():
+    return song_queue
 
 def start_master():
     """ Main thread to get all ToF data and start playing music and sending data. """

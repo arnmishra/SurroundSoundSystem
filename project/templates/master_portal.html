@@ -1,7 +1,38 @@
-Welcome to {{ room_name }}
+<div id="songs">
+	Welcome to {{ room_name }}
 
-<form action="/add_song" method="POST">
+	<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.0/jquery.min.js"></script>
+
+	<br>
 	Name of song: <input name="song_name" id="song_name" type="text" required><br>
 	<input name="room_name" id="room_name" type="hidden" value="{{ room_name }}"><br>
-	<input type="submit" value="Submit">
-</form>
+	<input type="submit" value="Submit" onClick="addSong()">
+
+	{% if song_length %}
+		<ul>
+			{% for song in song_queue %}
+				<li>song</li>
+			{% endfor %}
+		</ul>
+	{% endif %}
+	{% if not song_length %}
+		<p>No songs on Queue!</p>
+	{% endif %}
+</div>
+<script>
+
+function addSong() {
+	var song_name = document.getElementById("song_name").value;
+	var room_name = document.getElementById("room_name").value;
+    $.post("/add_song",
+		{
+    		'song_name': song_name,
+    		'room_name': room_name
+    	},
+    	function(data, status) {
+    		$("#songs").html(data.responseText);
+    	}
+	);
+}
+
+</script>

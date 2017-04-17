@@ -2,7 +2,7 @@ from project import app, db
 from models import Room
 import netifaces as ni
 from flask import render_template, url_for, request
-from project.scripts.master import start_master, add_song_to_queue
+from project.scripts.master import start_master, add_song_to_queue, get_song_queue
 from project.scripts.slave import start_slave
 from threading import Thread
 
@@ -56,7 +56,8 @@ def create_team():
     db.session.add(new_room)
     db.session.commit()
     start_thread(start_master, ())
-    return render_template("master_portal.html", room_name=room_name)
+    song_queue = list(get_song_queue().queue)
+    return render_template("master_portal.html", room_name=room_name, song_length=len(song_queue)>0)
 
 @app.route("/add_song", methods=['POST'])
 def add_song():
@@ -65,7 +66,8 @@ def add_song():
     :return: master_portal.html
     """
     add_song_to_queue(request.form["song_name"])
-    return render_template("master_portal.html", room_name=request.form["room_name"])
+    song_queue = list(get_song_queue().queue)
+    return render_template("master_portal.html", room_name=request.form["room_name"], song_queue=song_queue, song_length=len(song_queue)>0)
 
 @app.route("/join", methods=['GET'])
 def join_page():
