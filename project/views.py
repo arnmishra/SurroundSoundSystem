@@ -5,6 +5,7 @@ from flask import render_template, url_for, request
 from project.scripts.master import start_master, add_song_to_queue, get_song_queue, get_currently_playing
 from project.scripts.slave import start_slave
 from threading import Thread
+import subprocess
 
 def start_thread(method_name, arguments):
     """ Method to start new daemon threads.
@@ -65,10 +66,16 @@ def add_song():
 
     :return: master_portal.html
     """
-    add_song_to_queue(request.form["song_name"])
+    print request.form
+    if(request.form["song_name"]):
+        add_song_to_queue(request.form["song_name"])
+    elif(request.form["youtube_link"]):
+        link = request.form["youtube_link"]
+        command = "youtube-dl --extract-audio --output \'project/audio_files/%%(id)s.%%(ext)s\' --audio-format wav %s" % link
+        a = subprocess.check_output([command], shell=True)
+        link_id = link.split("=")[-1]
+        add_song_to_queue("%s.wav" % link_id)
     song_queue = list(get_song_queue().queue)
-    print song_queue
-    print get_currently_playing()
     return render_template("master_portal.html", room_name=request.form["room_name"], song_queue=song_queue, currently_playing=get_currently_playing())
 
 @app.route("/join", methods=['GET'])
@@ -89,18 +96,19 @@ def select_room():
 
     :return: slave_portal.html
     """
-    for element in request.form:
-        if element != "password":
-            room_name = request.form[element]
-            break
-    password = request.form["password"]
-    all_rooms = Room.query.filter_by(room_name=Room.room_name).all()
-    for room in all_rooms:
-        if room.password == password:
-            start_thread(start_slave, (room.master_ip, ))
-            return render_template("slave_portal.html", room_name=room_name)
-    rooms = Room.query.all()
-    room_names = []
-    for room in rooms:
-        room_names.append(room.room_name)
+    start_thread(start_slave, (request.form["ip"], ))
+    # for element in request.form:
+    #     if element != "password":
+    #         room_name = request.form[element]
+    #         break
+    # password = request.form["password"]
+    # all_rooms = Room.query.filter_by(room_name=Room.room_name).all()
+    # for room in all_rooms:
+    #     if room.password == password:
+    #         start_thread(start_slave, (room.master_ip, ))
+    #         return render_template("slave_portal.html", room_name=room_name)
+    # rooms = Room.query.all()
+    # room_names = []
+    # for room in rooms:
+    #     room_names.append(room.room_name)
     return render_template("join.html", room_names=room_names, error="Wrong Password")

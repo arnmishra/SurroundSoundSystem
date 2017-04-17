@@ -32,12 +32,14 @@
 
 function addSong() {
 	var song_name = document.getElementById("song_name").value;
+	var youtube_link = document.getElementById("youtube_link").value;
 	var room_name = document.getElementById("room_name").value;
     $.ajax({
     	type:"POST",
     	url:"/add_song",
 		data:{
     		'song_name': song_name,
+    		'youtube_link': youtube_link,
     		'room_name': room_name
     	},
     	success: function (response) {

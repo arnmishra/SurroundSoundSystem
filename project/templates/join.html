@@ -1,9 +1,10 @@
 {{ error }}
 <form action="/select_room" method="POST">
 	Select a room:
-	{% for room in room_names %}
+	<!-- {% for room in room_names %}
 		<input type="radio" name="{{ room }}" value="{{ room }}"> {{ room }}<br>
 	{% endfor %}
-	Password: <input name="password" id="password" type="password" required><br>
+	Password: <input name="password" id="password" type="password" required><br> -->
+	IP: <input name="ip" id="ip" type="ip" required><br>
 	<input type="submit" value="Submit">
 </form>
