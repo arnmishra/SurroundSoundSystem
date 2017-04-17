@@ -111,4 +111,4 @@ def select_room():
     # room_names = []
     # for room in rooms:
     #     room_names.append(room.room_name)
-    return render_template("join.html", room_names=room_names, error="Wrong Password")
+    return render_template("slave_portal.html", room_name="room_name")
