@@ -57,7 +57,7 @@ def create_team():
     db.session.commit()
     start_thread(start_master, ())
     song_queue = list(get_song_queue().queue)
-    return render_template("master_portal.html", room_name=room_name, song_length=len(song_queue)>0)
+    return render_template("master_portal.html", room_name=room_name, song_queue=song_queue)
 
 @app.route("/add_song", methods=['POST'])
 def add_song():
@@ -67,7 +67,8 @@ def add_song():
     """
     add_song_to_queue(request.form["song_name"])
     song_queue = list(get_song_queue().queue)
-    return render_template("master_portal.html", room_name=request.form["room_name"], song_queue=song_queue, song_length=len(song_queue)>0)
+    print song_queue
+    return render_template("master_portal.html", room_name=request.form["room_name"], song_queue=song_queue)
 
 @app.route("/join", methods=['GET'])
 def join_page():

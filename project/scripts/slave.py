@@ -68,7 +68,7 @@ def accept_data(master_ip):
             pass
         data_bytes.put(data)
         i += 1
-        print "Received Packet #", i
+        # print "Received Packet #", i
 
     data_sock.close()
 

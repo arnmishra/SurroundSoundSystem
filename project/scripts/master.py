@@ -222,7 +222,7 @@ def start_song(song_name):
 
     :param song_path: path to song file
     """
-    global max_delay, slaves_rtt, pickled_data
+    global max_delay, slaves_rtt, pickled_data, playing_song
     playing_song_lock.acquire()
     playing_song = True
     playing_song_lock.release()
