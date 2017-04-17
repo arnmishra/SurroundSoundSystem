@@ -11,7 +11,13 @@
 
 	<input name="room_name" id="room_name" type="hidden" value="{{ room_name }}"><br>
 	<input type="submit" value="Submit" onClick="addSong()">
-
+	<h2>Currently Playing</h2>
+		{% if currently_playing|length > 0 %}
+			{{ currently_playing }}
+		{% else %}
+			<p> No song currently playing! </p>
+		{% endif %}		
+	<h2>Song Queue</h2>
 	{% if song_queue|length > 0 %}
 		<ul>
 			{% for song in song_queue %}
@@ -27,16 +33,19 @@
 function addSong() {
 	var song_name = document.getElementById("song_name").value;
 	var room_name = document.getElementById("room_name").value;
-    $.post("/add_song",
-		{
+    $.ajax({
+    	type:"POST",
+    	url:"/add_song",
+		data:{
     		'song_name': song_name,
     		'room_name': room_name
     	},
-    	function(data, status) {
-    		console.log(data)
-    		$("#songs").html(data.responseText);
+    	success: function (response) {
+    		$("#songs").html(response);
+    	}, error: function (response) {
+    		$("#songs").html(response);
     	}
-	);
+	});
 }
 
 </script>

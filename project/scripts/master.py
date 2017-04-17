@@ -1,4 +1,5 @@
 import pyaudio
+from project import app
 from socket import *
 import wave
 import Queue
@@ -28,6 +29,7 @@ playing_song = False # Boolean to identify if song is currently playing
 max_delay = -1 # Maximum RTT Delay among nodes.
 pickled_data = -1 # Current Song Configuration Data
 slaves_rtt = {} # Mapping of slaves IPs to their RTT delays
+currently_playing = ''
 
 def start_thread(method_name, arguments):
     """ Method to start new daemon threads.
@@ -251,15 +253,22 @@ def add_song_to_queue(song_name):
 
     :param song_name: name of the song
     """
-    global playing_song
+    global playing_song, currently_playing
     if playing_song:
         print 'Added song to queue'
         song_queue.put(song_name)
     else:
+        currently_playing = song_name
         start_song(song_name)
 
 def get_song_queue():
+    global song_queue
     return song_queue
+
+def get_currently_playing():
+    global currently_playing
+    print currently_playing
+    return currently_playing
 
 def start_master():
     """ Main thread to get all ToF data and start playing music and sending data. """
@@ -277,7 +286,10 @@ def start_master():
 
     while True:
         while(song_queue.qsize() > 0 and playing_song == False):
-            start_song(song_queue.get())
+            next_song = song_queue.get()
+            currently_playing = next_song
+            #views.py -> update song
+            start_song(next_song)
         
 
 if __name__ == "__main__":
