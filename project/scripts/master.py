@@ -1,4 +1,5 @@
 import pyaudio
+from project import app
 from socket import *
 import wave
 import Queue
@@ -11,6 +12,10 @@ import os
 
 CHUNK = 1024
 BUFFER = 12
+DATA_PORT = 9015
+HEARTBEAT_PORT = 9010
+SEND_DATA_PORT = 9005
+SEND_HEARTBEAT_PORT = 9000
 
 data_sock = socket(AF_INET, SOCK_DGRAM) # UDP Socket for sending data
 heartbeat_sock = socket(AF_INET, SOCK_DGRAM) # UDP Socket for managing heartbeats
@@ -22,7 +27,9 @@ heartbeat_lock = Lock() # Lock to prevent access during modification of hearbeat
 playing_song_lock = Lock() # Lock for modifying playing song boolean
 playing_song = False # Boolean to identify if song is currently playing
 max_delay = -1 # Maximum RTT Delay among nodes.
+pickled_data = -1 # Current Song Configuration Data
 slaves_rtt = {} # Mapping of slaves IPs to their RTT delays
+currently_playing = ''
 
 def start_thread(method_name, arguments):
     """ Method to start new daemon threads.
@@ -40,6 +47,7 @@ def config_messages(song_path):
     :param song_path: path to the song
     :return: Time that messages are sent and stream to play audio
     """
+    global pickled_data
 
     p = pyaudio.PyAudio()
     wf = wave.open(song_path, 'rb')
@@ -59,14 +67,8 @@ def config_messages(song_path):
     message['format'] = format
 
     pickled_data = pickle.dumps(message)
-    start_time = time.time()
 
-    heartbeat_lock.acquire()
-    for ip in slave_ips:  
-        data_sock.sendto(pickled_data, (ip, 8000))
-    heartbeat_lock.release()
-
-    return start_time, stream
+    return stream
 
 def player_thread(stream):
     """ Play the music on the slave. 
@@ -103,7 +105,7 @@ def slave_transmission(slave_ip, time_of_flight, data):
     global max_delay
     if max_delay > time_of_flight:
         time.sleep(max_delay - time_of_flight)
-    data_sock.sendto(data, (slave_ip, 8000))
+    data_sock.sendto(data, (slave_ip, SEND_DATA_PORT))
 
 def send_song(song_path, song_name, is_threaded):
     """ Send song chunks to each slave in a separate thread. 
@@ -112,7 +114,7 @@ def send_song(song_path, song_name, is_threaded):
     :param song_name: original song name provided by user
     :param is_threaded: run with threads or not
     """
-    global slaves_rtt, max_delay
+    global slaves_rtt, pickled_data
     wf = wave.open(song_path, 'rb')
     data = wf.readframes(CHUNK)
     i = 0
@@ -123,16 +125,17 @@ def send_song(song_path, song_name, is_threaded):
             if is_threaded:
                 start_thread(slave_transmission, (ip, slaves_rtt[ip], data))
             else:
-                data_sock.sendto(data, (ip, 8000))
+                data_sock.sendto(data, (ip, SEND_DATA_PORT))
         heartbeat_lock.release()
         data_bytes.put(data)
         i += 1
-        print "Sent Packet #", i
+        #print "Sent Packet #", i
         data = wf.readframes(CHUNK)
-    if ".wav" not in song_name:
+    if ".wav" not in song_name: # Put non .wav files on queue to delete extra file
         data_bytes.put(song_path)
     else:
         data_bytes.put("Finished")
+    pickled_data = -1
 
 def send_heartbeats(ip):
     """ Thread to send heartbeats to each of the slaves every 1 second
@@ -144,7 +147,7 @@ def send_heartbeats(ip):
         heartbeat_lock.acquire()
         for ip in heartbeat_slaves:
             if heartbeat_slaves[ip] == -1:
-                heartbeat_sock.sendto("Heartbeat", (ip, 9000))
+                heartbeat_sock.sendto("Heartbeat", (ip, SEND_HEARTBEAT_PORT))
                 heartbeat_slaves[ip] = time.time() + 1.0
         heartbeat_lock.release()
         time.sleep(1)
@@ -162,11 +165,17 @@ def receive_heartbeats():
         receive_time = time.time()
         heartbeat_lock.acquire()
         if addr[0] not in heartbeat_slaves:
-            print "%s incorrectly marked failed." % (addr[0])
-            sys.exit(1)
-        new_rtt = float(receive_time - (heartbeat_slaves[addr[0]] - 1.0))/2.0
-        if receive_time > heartbeat_slaves[addr[0]]:
+            print "%s Slave Connected." % (addr[0])
+            start_thread(send_heartbeats, (addr[0],))
+            slave_ips.append(addr[0])
+            heartbeat_slaves[addr[0]] = -1
+            if pickled_data != -1:
+                data_sock.sendto(pickled_data, (addr[0], SEND_DATA_PORT)) # Send current song configuration materials
+            heartbeat_lock.release()
+            continue
+        elif receive_time > heartbeat_slaves[addr[0]]:
             print "%s heartbeat period is over 1 second: %s expected, %s arrival" % (addr[0], heartbeat_slaves[addr[0]], receive_time)
+        new_rtt = float(receive_time - (heartbeat_slaves[addr[0]] - 1.0))/2.0
         slaves_rtt[addr[0]] = new_rtt
         if new_rtt > max_delay:
             max_delay = new_rtt
@@ -201,9 +210,9 @@ def convert_song_name(song_name):
     :param song_name: Song name that is passed in by the user
     :return: Path to new song file
     """
-    current_song_path = "audio_files/" + song_name
+    current_song_path = "project/audio_files/" + song_name
     if song_name.split(".")[-1] != "wav":
-        final_song_path = "audio_files/" + ".".join(song_name.split(".")[0:-1]) + ".wav"
+        final_song_path = "project/audio_files/" + ".".join(song_name.split(".")[0:-1]) + ".wav"
         tfm = sox.Transformer()
         tfm.build(current_song_path, final_song_path)
         return final_song_path
@@ -215,43 +224,58 @@ def start_song(song_name):
 
     :param song_path: path to song file
     """
-    global max_delay, slaves_rtt
+    global max_delay, slaves_rtt, pickled_data, playing_song
     playing_song_lock.acquire()
     playing_song = True
     playing_song_lock.release()
     song_path = convert_song_name(song_name)
-    start_time, stream = config_messages(song_path)
+    stream = config_messages(song_path)
+    for ip in slave_ips:  
+        data_sock.sendto(pickled_data, (ip, SEND_DATA_PORT))
     for i in range(len(slave_ips)):
         (data, addr) = data_sock.recvfrom(1024)
-        time_of_flight = (time.time() - start_time)/2.0
-        if time_of_flight > max_delay:
-            max_delay = time_of_flight
-        slaves_rtt[addr[0]] = time_of_flight
-        print "Slave #", i, "Connected"
-
+        print "%s Slave Connected." % (slave_ips[i])
+    max_delay = max(slaves_rtt.values())
     start_thread(player_thread, (stream,))
     start_thread(send_song, (song_path, song_name, True))
 
 def accept_input():
     """ Thread to accept new song inputs to play after the current song. """
-    global playing_song
-
     while True:
         request = raw_input()
         command = request.split(' ')[0]
         song_name = request.split(' ')[1]
         if(command == 'add'):
-            if(playing_song == True):
-                print 'Added song to queue'
-                song_queue.put(song_name)
-            else:
-                start_song(song_name)
-        time.sleep(1.0)
+            add_song(song_name)
 
-def main():
+def add_song_to_queue(song_name):
+    """ Add songs to the queue or start playing them if they are ready.
+
+    :param song_name: name of the song
+    """
+    global playing_song, currently_playing
+    if playing_song:
+        print 'Added song to queue'
+        song_queue.put(song_name)
+    else:
+        currently_playing = song_name
+        start_song(song_name)
+
+def get_song_queue():
+    global song_queue
+    return song_queue
+
+def get_currently_playing():
+    global currently_playing
+    print currently_playing
+    return currently_playing
+
+def start_master():
     """ Main thread to get all ToF data and start playing music and sending data. """
     global playing_song, heartbeat_slaves
 
+    data_sock.bind(("", DATA_PORT))
+    heartbeat_sock.bind(("", HEARTBEAT_PORT))
     for ip in slave_ips:
         heartbeat_slaves[ip] = -1
     for ip in slave_ips:
@@ -262,15 +286,12 @@ def main():
 
     while True:
         while(song_queue.qsize() > 0 and playing_song == False):
-            start_song(song_queue.get())
+            next_song = song_queue.get()
+            currently_playing = next_song
+            #views.py -> update song
+            start_song(next_song)
         
 
 if __name__ == "__main__":
-    if len(sys.argv) < 2:
-        print('Usage: python %s <list_of_slave_ips>' % sys.argv[0])
-        print('e.g. python %s 1.1.1.1 2.2.2.2 3.3.3.3' % sys.argv[0])
-        sys.exit(1)
     slave_ips = sys.argv[1:]
-    data_sock.bind(("", 8010))
-    heartbeat_sock.bind(("", 9010))
     main()

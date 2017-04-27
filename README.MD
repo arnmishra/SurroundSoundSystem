@@ -1,5 +1,7 @@
 # Wireless Surround Sound System
 
+This is no longer stable. Revert to commit 7545141 for stable code during restructuring.
+
 SurroundSoundSystem is a wireless surround sound system started in CS 439 at the University of Illinois at Urbana Champaign. The purpose of this project is to allow multiple devices to play audio files wirelessly in synchronous. 
 
 ### Usage
