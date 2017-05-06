@@ -50,15 +50,14 @@ def create_team():
     room_name = request.form["room_name"]
     max_size = request.form["max_size"]
     min_size = request.form["min_size"]
-    password = request.form["password"]
     wifi_network_name = request.form["wifi_network_name"]
     master_ip = ni.ifaddresses('en0')[2][0]['addr']
-    new_room = Room(room_name, max_size, min_size, password, wifi_network_name, master_ip)
+    new_room = Room(room_name, max_size, min_size, wifi_network_name, master_ip)
     db.session.add(new_room)
     db.session.commit()
     start_thread(start_master, ())
     song_queue = list(get_song_queue().queue)
-    return render_template("master_portal.html", room_name=room_name, song_queue=song_queue)
+    return render_template("master_portal.html", room_name=room_name, song_queue=song_queue, access_code=new_room.id)
 
 @app.route("/add_song", methods=['POST'])
 def add_song():
@@ -96,7 +95,10 @@ def select_room():
 
     :return: slave_portal.html
     """
-    start_thread(start_slave, (request.form["ip"], ))
+    access_code = request.form["access_code"]
+    room = Room.query.filter_by(id=access_code).first()
+    start_thread(start_slave, (room.master_ip, ))
+    
     # for element in request.form:
     #     if element != "password":
     #         room_name = request.form[element]
@@ -111,4 +113,4 @@ def select_room():
     # room_names = []
     # for room in rooms:
     #     room_names.append(room.room_name)
-    return render_template("slave_portal.html", room_name="room_name")
+    return render_template("slave_portal.html", room_name=room.room_name)
