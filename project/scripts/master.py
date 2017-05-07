@@ -176,7 +176,12 @@ def receive_heartbeats():
         elif receive_time > heartbeat_slaves[addr[0]]:
             print "%s heartbeat period is over 1 second: %s expected, %s arrival" % (addr[0], heartbeat_slaves[addr[0]], receive_time)
         new_rtt = float(receive_time - (heartbeat_slaves[addr[0]] - 1.0))/2.0
-        slaves_rtt[addr[0]] = new_rtt
+        if addr[0] in slaves_rtt:
+            alpha = 0.125
+            slaves_rtt[addr[0]] = (alpha * slaves_rtt[addr[0]]) + ((1 - alpha) * new_rtt)
+            new_rtt = slaves_rtt[addr[0]]
+        else:
+            slaves_rtt[addr[0]] = new_rtt
         if new_rtt > max_delay:
             max_delay = new_rtt
         else:

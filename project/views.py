@@ -57,7 +57,7 @@ def create_team():
     db.session.commit()
     start_thread(start_master, ())
     song_queue = list(get_song_queue().queue)
-    return render_template("master_portal.html", room_name=room_name, song_queue=song_queue, access_code=new_room.id)
+    return render_template("master_portal.html", room_name=room_name, song_queue=song_queue)
 
 @app.route("/add_song", methods=['POST'])
 def add_song():
@@ -95,22 +95,7 @@ def select_room():
 
     :return: slave_portal.html
     """
-    access_code = request.form["access_code"]
-    room = Room.query.filter_by(id=access_code).first()
-    start_thread(start_slave, (room.master_ip, ))
-    
-    # for element in request.form:
-    #     if element != "password":
-    #         room_name = request.form[element]
-    #         break
-    # password = request.form["password"]
-    # all_rooms = Room.query.filter_by(room_name=Room.room_name).all()
-    # for room in all_rooms:
-    #     if room.password == password:
-    #         start_thread(start_slave, (room.master_ip, ))
-    #         return render_template("slave_portal.html", room_name=room_name)
-    # rooms = Room.query.all()
-    # room_names = []
-    # for room in rooms:
-    #     room_names.append(room.room_name)
+    master_ip = request.form["ip"]
+    room = Room.query.filter_by(master_ip=master_ip).first()
+    start_thread(start_slave, (master_ip, ))
     return render_template("slave_portal.html", room_name=room.room_name)
