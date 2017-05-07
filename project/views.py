@@ -98,4 +98,4 @@ def select_room():
     master_ip = request.form["ip"]
     room = Room.query.filter_by(master_ip=master_ip).first()
     start_thread(start_slave, (master_ip, ))
-    return render_template("slave_portal.html", room_name=room.room_name)
+    return render_template("slave_portal.html")
