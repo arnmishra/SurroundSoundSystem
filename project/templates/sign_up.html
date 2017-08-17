@@ -14,20 +14,41 @@
 		<link href='https://fonts.googleapis.com/css?family=Passion+One' rel='stylesheet' type='text/css'>
 		<link href='https://fonts.googleapis.com/css?family=Oxygen' rel='stylesheet' type='text/css'>
 
-		<title>Sign In</title>
+		<title>Sign Up</title>
 	</head>
 	<body>
 		<div class="container">
 			<div class="row main">
 				<div class="main-login main-center">
-				<h4>Sign In.</h4>
+				<h4>Sign up to remember your room details.</h4>
 				{% if error %}
 					<div style="color:#D8000C;background-color:#FFBABA;font-size:16px" class="isa_error">
 					   <i class="fa fa-times-circle"></i>
 					   {{ error }}
 					</div>
 				{% endif %}
-					<form class="" method="post" action="/login">
+					<form class="" method="post" action="/sign_up">
+						
+						<div class="form-group">
+							<label for="name" class="cols-sm-2 control-label">Your Name</label>
+							<div class="cols-sm-10">
+								<div class="input-group">
+									<span class="input-group-addon"><i class="fa fa-user fa" aria-hidden="true"></i></span>
+									<input type="text" class="form-control" name="name" id="name"  placeholder="Enter your Name"/>
+								</div>
+							</div>
+						</div>
+
+						<div class="form-group">
+							<label for="email" class="cols-sm-2 control-label">Your Email</label>
+							<div class="cols-sm-10">
+								<div class="input-group">
+									<span class="input-group-addon"><i class="fa fa-envelope fa" aria-hidden="true"></i></span>
+									<input type="text" class="form-control" name="email" id="email"  placeholder="Enter your Email"/>
+								</div>
+							</div>
+						</div>
+
 						<div class="form-group">
 							<label for="username" class="cols-sm-2 control-label">Username</label>
 							<div class="cols-sm-10">
@@ -48,6 +69,16 @@
 							</div>
 						</div>
 
+						<div class="form-group">
+							<label for="confirm" class="cols-sm-2 control-label">Confirm Password</label>
+							<div class="cols-sm-10">
+								<div class="input-group">
+									<span class="input-group-addon"><i class="fa fa-lock fa-lg" aria-hidden="true"></i></span>
+									<input type="password" class="form-control" name="confirm" id="confirm"  placeholder="Confirm your Password"/>
+								</div>
+							</div>
+						</div>
+
 						<div class="form-group ">
 							<input type="submit" value="Submit">
 						</div>
@@ -62,5 +93,13 @@
     <!-- Include all compiled plugins (below), or include individual files as needed -->
     <script src="https://npmcdn.com/tether@1.2.4/dist/js/tether.min.js"></script>
     <script src="static/js/bootstrap.min.js"></script>
+    <script>
+    $('#password, #confirm').on('keyup', function () {
+        if ($('#password').val() == $('#confirm').val()) {
+            $('#password').css('border-color', 'green').css("border-style", "solid");
+        } else 
+            $('#password').css('border-color', 'red').css("border-style", "solid");
+    });
+    </script>
 	</body>
 </html>

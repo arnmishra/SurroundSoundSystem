@@ -1,4 +1,4 @@
 psutil==5.2.0
 PyAudio==0.2.9
 sox==1.2.8
-youtube-dl=
+youtube-dl=2017.4.17

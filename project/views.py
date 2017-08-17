@@ -1,11 +1,26 @@
 from project import app, db
-from models import Room
+from models import Room, User
 import netifaces as ni
 from flask import render_template, url_for, request
 from project.scripts.master import start_master, add_song_to_queue, get_song_queue, get_currently_playing
 from project.scripts.slave import start_slave
 from threading import Thread
 import subprocess
+from flask.ext.login import LoginManager
+
+login_manager = LoginManager()
+login_manager.init_app(app)
+login_manager.login_view = 'login'
+marker_addresses = {}
+app.secret_key = 'secret'
+
+@login_manager.user_loader
+def load_user(id):
+    """ Login Page
+    :param id: of user
+    :return: User being queried for
+    """
+    return User.query.get(int(id))
 
 def start_thread(method_name, arguments):
     """ Method to start new daemon threads.
@@ -25,13 +40,55 @@ def index():
     """
     return render_template("index.html")
 
-@app.route("/login", methods=['GET'])
+@app.route("/login", methods=['GET', 'POST'])
 def login():
-    """ Renders Login page
+    """ Signs user in if login creds exist.
 
-    :return: login.html
+    :return: To Index Page
     """
-    return render_template("login.html")
+    if request.method == "GET":
+        return render_template("login.html", error=None)
+    username = request.form["username"]
+    password = request.form["password"]
+    user = User.query.filter_by(username=username, password=password).first()
+    if not user:
+        return render_template("login.html", error="Incorrect Username/Password")
+    login_user(user)
+    redirect(url_for('/', name=user.name))
+
+@app.route("/sign_up", methods=['GET', 'POST'])
+def sign_up():
+    """ Renders Home page after signing up.
+
+    :return: sign_up.html
+    """
+    if request.method == "GET":
+        return render_template("sign_up.html", error=None)
+    
+    name = request.form["name"]
+    email = request.form["email"]
+    username = request.form["username"]
+    password = request.form["password"]
+    confirm_password = request.form["confirm"]
+    if password != confirm_password:
+        return render_template("sign_up.html", error="Passwords Don't Match")
+    
+    new_user = User(name, username, password, email)
+    db.session.add(new_user)
+    db.session.commit()
+    login_user(new_user)
+
+    return redirect(url_for('/', name=name))
+
+@app.route('/logout')
+def logout():
+    """ Log out of system
+
+    :return: return to home page
+    """
+    logout_user()
+    return redirect("/")
+
 
 @app.route("/create", methods=['GET'])
 def create_page():
@@ -83,11 +140,12 @@ def join_page():
 
     :return: join.html
     """
-    rooms = Room.query.all()
-    room_names = []
-    for room in rooms:
-        room_names.append(room.room_name)
-    return render_template("join.html", room_names=room_names, error="")
+    # TODO: POPULATE EXISTING ROOM NAMES TO JOIN
+    # rooms = Room.query.all()
+    # room_names = []
+    # for room in rooms:
+    #     room_names.append(room.room_name)
+    return render_template("join.html")#, room_names=room_names)
 
 @app.route("/select_room", methods=['POST'])
 def select_room():

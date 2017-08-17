@@ -21,3 +21,19 @@ class Room(db.Model):
         return "<Room(room_name='%s', max_size='%d', min_size='%d', wifi_network_name='%s', master_ip='%s')>" \
                % (self.room_name, self.max_size, self.min_size, self.wifi_network_name, self.master_ip)
 
+class User(db.Model):
+    """ User Model with all data about a specific user. """
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String)
+    email = db.Column(db.Integer)
+    username = db.Column(db.Integer)
+    password = db.Column(db.String)
+
+    def __init__(self, name, email, username, password):
+        self.name = name
+        self.email = email
+        self.username = username
+        self.password = password
+
+    def __repr__(self):
+        return "<Room(name='%s', email='%d', username='%d')>" % (self.name, self.email, self.username)

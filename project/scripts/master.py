@@ -1,5 +1,4 @@
 import pyaudio
-from project import app
 from socket import *
 import wave
 import Queue
@@ -299,4 +298,4 @@ def start_master():
 
 if __name__ == "__main__":
     slave_ips = sys.argv[1:]
-    main()
+    start_master()

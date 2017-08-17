@@ -1,11 +1,57 @@
-{{ error }}
-<form action="/select_room" method="POST">
-	Select a room:
-	<br>
-	<!-- {% for room in room_names %}
-		<input type="radio" name="{{ room }}" value="{{ room }}"> {{ room }}<br>
-	{% endfor %}
-	Password: <input name="password" id="password" type="password" required><br> -->
-	IP: <input name="ip" id="ip" type="ip" required><br>
-	<input type="submit" value="Submit">
-</form>
+<!DOCTYPE html>
+<html lang="en">
+    <head> 
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+
+
+        <!-- Website CSS style -->
+        <link href="static/css/bootstrap.min.css" rel="stylesheet">
+
+        <!-- Website Font style -->
+        <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.6.1/css/font-awesome.min.css">
+        <link rel="stylesheet" href="static/css/style.css">
+        <!-- Google Fonts -->
+        <link href='https://fonts.googleapis.com/css?family=Passion+One' rel='stylesheet' type='text/css'>
+        <link href='https://fonts.googleapis.com/css?family=Oxygen' rel='stylesheet' type='text/css'>
+
+        <title>Join New Room</title>
+    </head>
+    <body>
+        <div class="container">
+            <div class="row main">
+                <div class="main-login main-center">
+                <h4>Join a New Room.</h4>
+                {% if error %}
+                    <div style="color:#D8000C;background-color:#FFBABA;font-size:16px" class="isa_error">
+                       <i class="fa fa-times-circle"></i>
+                       {{ error }}
+                    </div>
+                {% endif %}
+                    <form class="" action="/create_team" method="POST">
+                     
+                        <div class="form-group">
+                            <label for="username" class="cols-sm-2 control-label">Enter IP Address:</label>
+                            <div class="cols-sm-10">
+                                <div class="input-group">
+                                    <span class="input-group-addon"><i class="fa fa-users fa" aria-hidden="true"></i></span>
+                                    <input type="text" class="form-control" name="ip" id="ip" placeholder="i.e. 127.0.0.1" required/>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-group ">
+                            <input type="submit" value="Submit">
+                        </div>
+                        
+                    </form>
+                </div>
+            </div>
+        </div>
+
+         <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="https://npmcdn.com/tether@1.2.4/dist/js/tether.min.js"></script>
+    <script src="static/js/bootstrap.min.js"></script>
+    </body>
+</html>
