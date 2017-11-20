@@ -1,4 +1,4 @@
-""" App to host Google Maps of Location and Nearby Pantries."""
+""" App to frontend of SurroundSoundSystem project.."""
 
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
