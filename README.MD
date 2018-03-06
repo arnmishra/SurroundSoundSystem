@@ -41,3 +41,10 @@ Work on many of the Todos has begun, so contact the maintainers before beginning
    [python]: <https://www.python.org/download/releases/2.7/>
    [pip]: <https://pypi.python.org/pypi/pip/>
    [homebrew]: <https://brew.sh/>
+
+Relevant Links to work with:
+https://github.com/akul08/Spotify-Downloader
+https://github.com/rg3/youtube-dl/blob/master/README.md#readme
+https://github.com/mps-youtube/pafy
+https://github.com/marcosschroh/youtube-audio-downloader
+
